@@ -7,6 +7,8 @@ defmodule WalletWeb.Router do
 
   scope "/api", WalletWeb do
     pipe_through :api
+
+    get "/hello", HelloController, :hello
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
