@@ -1,6 +1,8 @@
 defmodule Wallet.ConfigAgent do
-  def start_link do
-    Agent.start_link(fn -> %{} end, name: __MODULE__)
+  use Agent
+
+  def start_link(default) do
+    Agent.start_link(fn -> default end, name: __MODULE__)
   end
 
   def get_jwt_secret_key() do
