@@ -35,3 +35,11 @@ wallet-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# Ignore files related to your text editor or IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore files related to Elixir's Interactive Elixir (IEx) tool
+.iex.exs

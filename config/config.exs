@@ -7,6 +7,8 @@
 # General application configuration
 import Config
 
+config :logger, level: :debug
+
 config :wallet,
   ecto_repos: [Wallet.Repo],
   generators: [timestamp_type: :utc_datetime]
