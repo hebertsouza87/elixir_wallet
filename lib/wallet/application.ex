@@ -10,6 +10,7 @@ defmodule Wallet.Application do
     children = [
       WalletWeb.Telemetry,
       Wallet.Repo,
+      {Wallet.ConfigAgent, %{}},
       {DNSCluster, query: Application.get_env(:wallet, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Wallet.PubSub},
       # Start the Finch HTTP client for sending emails

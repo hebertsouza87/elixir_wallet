@@ -8,7 +8,17 @@ defmodule WalletWeb.Router do
   scope "/api", WalletWeb do
     pipe_through :api
 
-    get "/hello", HelloController, :hello
+    post "/wallets", WalletController, :create
+
+    post "/deposit", TransactionController, :deposit
+    post "/withdraw", TransactionController, :withdraw
+    post "/transfer", TransactionController, :transfer
+
+    if Mix.env() == :dev do
+      scope "/dev" do
+        post "/token", DevAuxController, :create_token
+      end
+    end
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
