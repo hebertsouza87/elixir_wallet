@@ -13,7 +13,7 @@ defmodule Wallet.Wallet do
 
   def changeset(wallet, attrs) do
     wallet
-    |> cast(attrs, [:user_id])
+    |> cast(attrs, [:user_id, :balance])
     |> validate_required([:user_id])
     |> unique_constraint(:user_id)
   end
