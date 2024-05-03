@@ -20,7 +20,7 @@ defmodule WalletWeb.DevAuxController do
       _ ->
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{error: "Não foi possível criar o token"})
+        |> json(%{error: "Error creating token"})
     end
   end
 end

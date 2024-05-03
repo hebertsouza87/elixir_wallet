@@ -1,4 +1,4 @@
-defmodule Wallet.Authenticator do
+defmodule Authentication.Authenticator do
   alias Joken.Signer
   alias Joken.Config
   alias Joken.Claim
@@ -11,10 +11,9 @@ defmodule Wallet.Authenticator do
 
     [_, jwt | _] = String.split(auth_header)
 
-    secret_key = ConfigAgent.get_jwt_secret_key()
     signer = Signer.create("HS256", secret_key)
 
-    {:ok, claims} = jwt |> Joken.peek_claims() |> Joken.with_signer(signer) |> Joken.verify()
+    {:ok, claims} = jwt |> Joken.verify(signer, [])
 
     user_id = claims |> Map.get("user_id")
 
