@@ -1,0 +1,1 @@
+[coveralls: [treat_no_relevant_lines_as_covered: true]]

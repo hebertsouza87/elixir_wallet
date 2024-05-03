@@ -1,4 +1,5 @@
-defmodule Authentication.Authenticator do
+defmodule Authentication.Helper do
+  alias Joken
   alias Joken.Signer
   alias Wallet.ConfigAgent
 
@@ -16,5 +17,15 @@ defmodule Authentication.Authenticator do
     user_id = claims |> Map.get("user_id")
 
     {:ok, user_id}
+  end
+
+  def create_token(user_id) do
+    secret_key = Wallet.ConfigAgent.get_jwt_secret_key()
+
+    signer = Signer.create("HS256", secret_key)
+
+    claims = %{"user_id" => user_id}
+
+    Joken.encode_and_sign(claims, signer)
   end
 end

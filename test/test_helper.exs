@@ -1,2 +1,7 @@
 ExUnit.start()
-Ecto.Adapters.SQL.Sandbox.mode(Wallet.Repo, :manual)
+
+ExUnit.configure(exclude: [:db])
+
+ExUnit.configure(exclude: [], include: [db: :test]) do
+  Ecto.Adapters.SQL.Sandbox.start_link(Wallet.Repo, :sandbox)
+end

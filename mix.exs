@@ -16,7 +16,7 @@ defmodule Wallet.MixProject do
   def application do
     [
       mod: {Wallet.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :ecto_sql]
     ]
   end
 
@@ -47,6 +47,8 @@ defmodule Wallet.MixProject do
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.2"},
       {:joken, "~> 2.6"},
+      {:ecto_sqlite3, "~> 0.15.1", only: :test},
+      {:excoveralls, "~> 0.18.1", only: [:test, :dev]}
     ]
   end
 

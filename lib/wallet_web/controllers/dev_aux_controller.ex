@@ -1,16 +1,10 @@
 defmodule WalletWeb.DevAuxController do
   use WalletWeb, :controller
-  alias Joken.Signer
-  alias Joken
+
+  alias Authentication.Helper
 
   def create_token(conn, %{"user_id" => user_id}) do
-    secret_key = Wallet.ConfigAgent.get_jwt_secret_key()
-
-    signer = Signer.create("HS256", secret_key)
-
-    claims = %{"user_id" => user_id}
-
-    jwt = Joken.encode_and_sign(claims, signer)
+    jwt = Helper.create_token(user_id)
 
     case jwt do
       {:ok, jwt, _} ->
