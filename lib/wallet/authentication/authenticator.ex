@@ -1,7 +1,5 @@
 defmodule Authentication.Authenticator do
   alias Joken.Signer
-  alias Joken.Config
-  alias Joken.Claim
   alias Wallet.ConfigAgent
 
   def get_user_id_from_conn(conn) do

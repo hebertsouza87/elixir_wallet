@@ -3,7 +3,8 @@ defmodule WalletWeb.WalletController.WalletJSON do
     %{
       id: wallet.id,
       balance: wallet.balance,
-      user_id: wallet.user_id
+      user_id: wallet.user_id,
+      number: wallet.number,
     }
   end
 end
