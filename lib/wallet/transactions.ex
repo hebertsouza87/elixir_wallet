@@ -99,6 +99,9 @@ defmodule Wallet.Transactions do
       !correct_decimal_places?(amount) ->
         {:error, {:invalid, "Amount must have max two decimal places"}}
 
+      Decimal.compare(Decimal.new(Float.to_string(amount)), Decimal.new("0.0")) in [:eq, :lt] ->
+        {:error, {:invalid, "Amount must be greater than 0"}}
+
       true ->
         :ok
     end
