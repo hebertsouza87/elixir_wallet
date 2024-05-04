@@ -23,17 +23,21 @@ defmodule WalletWeb.ResponseHandler do
     render_response(conn, get_http_status(status), %{error: message})
   end
 
-  def handle_response({status, message}, conn) do
-    render_response(conn, get_http_status(status), %{error: message})
-  end
-
   def handle_response({status, nil}, conn) do
     render_response(conn, get_http_status(status), %{error: get_error_message(status)})
   end
 
+  def handle_response({status, ""}, conn) do
+    render_response(conn, get_http_status(status), %{error: get_error_message(status)})
+  end
+
+  def handle_response({status, message}, conn) do
+    render_response(conn, get_http_status(status), %{error: message})
+  end
+
   defp get_http_status(:ok), do: :ok
   defp get_http_status(:created), do: :created
-  defp get_http_status(:inivalid), do: :bad_request
+  defp get_http_status(:invalid), do: :bad_request
   defp get_http_status(:not_found), do: :not_found
   defp get_http_status(_), do: :internal_server_error
 
