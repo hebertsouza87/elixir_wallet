@@ -11,6 +11,7 @@ config :wallet, Wallet.Repo,
   password: "postgres",
   database: "wallet_test",
   hostname: "localhost",
+  port: 5433,
   pool: Ecto.Adapters.SQL.Sandbox
 
 # We don't run a server during test. If one is required,
