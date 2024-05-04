@@ -37,7 +37,7 @@ defmodule WalletWeb.ResponseHandler do
 
   defp get_http_status(:ok), do: :ok
   defp get_http_status(:created), do: :created
-  defp get_http_status(:inivalid), do: :bad_request
+  defp get_http_status(:invalid), do: :bad_request
   defp get_http_status(:not_found), do: :not_found
   defp get_http_status(_), do: :internal_server_error
 
