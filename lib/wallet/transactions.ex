@@ -40,6 +40,40 @@ defmodule Wallet.Transactions do
     end
   end
 
+  def tranfer_to_wallet_by_user(user_id, to_wallet_number, amount) do
+    case validate_amount(amount) do
+      :ok ->
+        case Wallets.get_wallet_by_user(user_id) do
+          nil -> {:error, {:not_found, "Wallet not found"}}
+          from_wallet ->
+            case Wallets.get_wallet_by_number(to_wallet_number) do
+              nil -> {:error, {:not_found, "To wallet not found"}}
+              to_wallet ->
+                if from_wallet.id == to_wallet.id do
+                  {:error, {:invalid, "Same wallet transfer not allowed"}}
+                else
+                  new_balance_from = Decimal.sub(from_wallet.balance, Decimal.new(Float.to_string(amount)))
+
+                  if Decimal.compare(new_balance_from, Decimal.new("0.0")) == :lt do
+                    {:error, {:invalid, "Insufficient funds"}}
+                  else
+                    new_balance_to = Decimal.add(to_wallet.balance, Decimal.new(Float.to_string(amount)))
+
+                    Wallet.changeset(to_wallet, %{balance: new_balance_to})
+                    |> Wallets.update()
+
+                    Wallet.changeset(from_wallet, %{balance: new_balance_from})
+                    |> Wallets.update()
+                  end
+                end
+            end
+        end
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
   defp correct_decimal_places?(amount) do
     Float.to_string(amount)
     |> String.split(".")
