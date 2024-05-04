@@ -16,5 +16,15 @@ defmodule Wallet.Wallet do
     |> cast(attrs, [:user_id, :balance])
     |> validate_required([:user_id])
     |> unique_constraint(:user_id)
+    |> validate_decimal(:balance)
+  end
+
+  defp validate_decimal(changeset, field) do
+    validate_change(changeset, field, fn _, value ->
+      case Decimal.to_string(value) |> String.split(".") |> Enum.at(1) |> String.length() <= 2 do
+        true -> []
+        false -> [{field, "must have at most two decimal places"}]
+      end
+    end)
   end
 end
