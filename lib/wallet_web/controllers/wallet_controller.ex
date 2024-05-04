@@ -3,15 +3,14 @@ defmodule WalletWeb.WalletController do
 
   alias Authentication.Helper
   alias Wallet.Wallets
-  alias Wallet.Wallet
-  alias WalletWeb.WalletController.WalletJSON
+  alias WalletWeb.ResponseHandler
 
   def create(conn, _params) do
-    with {:ok, user_id} <- Helper.get_user_id_from_conn(conn),
-         {:ok, %Wallet{} = wallet} <- Wallets.create_wallet(%{user_id: user_id}) do
-      json(conn, WalletJSON.render(wallet))
-    else
-      _ -> send_resp(conn, :bad_request, "")
+    result = case Helper.get_user_id_from_conn(conn) do
+      {:ok, user_id} -> Wallets.create_wallet(%{user_id: user_id})
+      error -> error
     end
+
+    ResponseHandler.handle_response(result, conn)
   end
 end

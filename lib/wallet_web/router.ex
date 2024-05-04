@@ -3,6 +3,7 @@ defmodule WalletWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug WalletWeb.ErrorHandler
   end
 
   scope "/api", WalletWeb do
