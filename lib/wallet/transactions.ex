@@ -1,4 +1,5 @@
 defmodule Wallet.Transactions do
+  alias Wallet.Repo
   alias Wallet.Wallets
   alias Wallet.Wallet
 
@@ -31,9 +32,22 @@ defmodule Wallet.Transactions do
          {:ok, new_balance_from} <- calculate_new_balance(from_wallet, amount, :sub),
          :ok <- validate_sufficient_funds(new_balance_from),
          {:ok, new_balance_to} <- calculate_new_balance(to_wallet, amount, :add) do
-          update_wallet_balance(to_wallet, new_balance_to)
-          update_wallet_balance(from_wallet, new_balance_from)
 
+      from_wallet_changeset = Ecto.Changeset.change(from_wallet, %{balance: new_balance_from})
+      to_wallet_changeset = Ecto.Changeset.change(to_wallet, %{balance: new_balance_to})
+
+      multi =
+        Ecto.Multi.new()
+        |> Ecto.Multi.update(:update_to, to_wallet_changeset)
+        |> Ecto.Multi.update(:update_from, from_wallet_changeset)
+
+      case Repo.transaction(multi) do
+        {:ok, %{update_from: updated_from_wallet}} ->
+          {:ok, updated_from_wallet}
+
+        {:error, _, _, _} ->
+          {:error, "Failed to transfer funds"}
+      end
     else
       error -> error
     end
