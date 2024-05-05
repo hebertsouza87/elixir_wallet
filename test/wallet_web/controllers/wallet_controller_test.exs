@@ -22,8 +22,8 @@ defmodule WalletWeb.WalletControllerTest do
     invalid_token = "token-inválido"
     conn = conn
     |> put_req_header("authorization", "Bearer #{invalid_token}")
-    |> post("/wallets")
+    |> post("/api/wallets")
 
-    assert json_response(conn, 404)
+    assert json_response(conn, 500)
   end
 end

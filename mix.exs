@@ -48,7 +48,8 @@ defmodule Wallet.MixProject do
       {:bandit, "~> 1.2"},
       {:joken, "~> 2.6"},
       {:ecto_sqlite3, "~> 0.15.1", only: :test},
-      {:excoveralls, "~> 0.18.1", only: [:test, :dev]}
+      {:excoveralls, "~> 0.18.1", only: [:test, :dev]},
+      {:ex_machina, "~> 2.7", only: :test}
     ]
   end
 
