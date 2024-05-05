@@ -4,6 +4,7 @@ defmodule Wallet.Transaction do
 
   @operation_types [:deposit, :withdraw, :transfer]
 
+  @primary_key {:id, Ecto.UUID, autogenerate: true}
   schema "transactions" do
     field :amount, :decimal
     field :operation, Ecto.Enum, values: @operation_types

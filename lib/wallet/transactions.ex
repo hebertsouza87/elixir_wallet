@@ -4,30 +4,41 @@ defmodule Wallet.Transactions do
   alias Wallet.Wallets
   alias Wallet.Transaction
 
-  def create_transaction(attrs \\ %{}) do
-    %Transaction{}
-    |> Transaction.changeset(attrs)
-    |> Repo.insert(returning: true)
+  defp create_transaction_multi(multi, attrs, operation_name) do
+    Multi.insert(multi, operation_name, Transaction.changeset(%Transaction{}, attrs))
   end
 
   def add_to_wallet_by_user(user_id, amount) do
-    with :ok <- validate_amount(amount),
-         {:ok, wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
-         new_balance <- calculate_new_balance(wallet, amount, :add) do
-      update_wallet_balance(wallet, new_balance)
-      create_transaction(%{wallet_id: wallet.id, amount: amount, operation: :deposit})
-    else
-      error -> error
-    end
+    change_balance(user_id, amount, :deposit)
   end
 
   def withdraw_to_wallet_by_user(user_id, amount) do
+    change_balance(user_id, amount, :withdraw)
+  end
+
+  defp change_balance(user_id, amount, operation) do
     with :ok <- validate_amount(amount),
          {:ok, wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
-         new_balance <- calculate_new_balance(wallet, amount, :sub),
+         new_balance <- calculate_new_balance(wallet, amount, operation),
          :ok <- validate_sufficient_funds(new_balance) do
-      update_wallet_balance(wallet, new_balance)
-      create_transaction(%{wallet_id: wallet.id, amount: amount, operation: :withdraw})
+
+      multi = Multi.new()
+      |> Multi.run(:update_wallet_balance, fn _repo, _changes ->
+        Wallets.update_wallet_balance(wallet, new_balance)
+      end)
+      |> create_transaction_multi(%{
+          wallet_id: wallet.id,
+          amount: amount,
+          operation: operation,
+        }, :create_transaction)
+
+      case Repo.transaction(multi) do
+        {:ok, %{create_transaction: created_transaction}} ->
+          {:ok, created_transaction}
+
+        {:error, error, message, _} ->
+          {:error, {error, message}}
+      end
     else
       error -> error
     end
@@ -38,24 +49,38 @@ defmodule Wallet.Transactions do
          {:ok, from_wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
          {:ok, to_wallet} <- Wallets.get_and_lock_wallet_by_number(to_wallet_number),
          :ok <- validate_same_wallet(from_wallet, to_wallet),
-         new_balance_from <- calculate_new_balance(from_wallet, amount, :sub),
+         new_balance_from <- calculate_new_balance(from_wallet, amount, :withdraw),
          :ok <- validate_sufficient_funds(new_balance_from),
-         new_balance_to <- calculate_new_balance(to_wallet, amount, :add) do
+         new_balance_to <- calculate_new_balance(to_wallet, amount, :deposit) do
 
-      from_wallet_changeset = Ecto.Changeset.change(from_wallet, %{balance: new_balance_from})
-      to_wallet_changeset = Ecto.Changeset.change(to_wallet, %{balance: new_balance_to})
-
-      multi =
-        Multi.new()
-        |> Multi.update(:update_to, to_wallet_changeset)
-        |> Multi.update(:update_from, from_wallet_changeset)
+      multi = Multi.new()
+      |> Multi.run(:update_from_wallet, fn _repo, _changes ->
+        Wallets.update_wallet_balance(from_wallet, new_balance_from)
+      end)
+      |> Multi.run(:update_to_wallet, fn _repo, _changes ->
+        Wallets.update_wallet_balance(to_wallet, new_balance_to)
+      end)
+      |> create_transaction_multi(%{
+        wallet_id: from_wallet.id,
+        amount: amount,
+        operation: :transfer,
+        wallet_destination_number: to_wallet.number,
+        wallet_origin_number: from_wallet.number
+      }, :create_transaction_from)
+      |> create_transaction_multi(%{
+        wallet_id: to_wallet.id,
+        amount: amount,
+        operation: :transfer,
+        wallet_destination_number: to_wallet.number,
+        wallet_origin_number: from_wallet.number
+      }, :create_transaction_to)
 
       case Repo.transaction(multi) do
-        {:ok, %{update_from: updated_from_wallet}} ->
-          {:ok, updated_from_wallet}
+        {:ok, %{create_transaction_from: created_transaction}} ->
+          {:ok, created_transaction}
 
-        {:error, _, _, _} ->
-          {:error, "Failed to transfer funds"}
+        {:error, error, message, _} ->
+          {:error, {error, message}}
       end
     else
       error -> error
@@ -70,8 +95,8 @@ defmodule Wallet.Transactions do
     end
   end
 
-  defp calculate_new_balance(wallet, amount, :sub) do Decimal.sub(wallet.balance, Decimal.new(Float.to_string(amount))) end
-  defp calculate_new_balance(wallet, amount, :add) do Decimal.add(wallet.balance, Decimal.new(Float.to_string(amount))) end
+  defp calculate_new_balance(wallet, amount, :withdraw) do Decimal.sub(wallet.balance, Decimal.new(Float.to_string(amount))) end
+  defp calculate_new_balance(wallet, amount, :deposit) do Decimal.add(wallet.balance, Decimal.new(Float.to_string(amount))) end
 
   defp validate_sufficient_funds(new_balance) do
     if Decimal.compare(new_balance, Decimal.new("0.0")) == :lt do
@@ -79,10 +104,6 @@ defmodule Wallet.Transactions do
     else
       :ok
     end
-  end
-
-  defp update_wallet_balance(wallet, new_balance) do
-    Wallets.update_wallet_balance(wallet, new_balance)
   end
 
   defp correct_decimal_places?(amount) do
