@@ -15,7 +15,7 @@ defmodule WalletWeb.Router do
     post "/withdraw", TransactionController, :withdraw
     post "/transfer", TransactionController, :transfer
 
-    if Mix.env() == :dev do
+    if Mix.env() in [:dev, :test] do
       scope "/dev" do
         post "/token", DevAuxController, :create_token
       end
