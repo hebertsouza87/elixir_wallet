@@ -10,21 +10,49 @@ defmodule Wallet.TransactionsTest do
     {:ok, %{wallet1: wallet1, wallet2: wallet2}}
   end
 
-  test "add_to_wallet_by_user/2", context do
-    assert {:ok, _wallet} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, 50.0)
-    assert {:error, _} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, -50.0)
-    assert {:error, _} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, "invalid")
+  describe "add_to_wallet_by_user/2" do
+    test "adds amount to wallet balance", context do
+      assert {:ok, _wallet} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, 50.0)
+    end
+
+    test "returns error for negative amount", context do
+      assert {:error, _} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, -50.0)
+    end
+
+    test "returns error for invalid amount type", context do
+      assert {:error, _} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, "invalid")
+    end
   end
 
-  test "withdraw_to_wallet_by_user/2", context do
-    assert {:ok, _wallet} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, 50.0)
-    assert {:error, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, 150.0)
-    assert {:error, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, "invalid")
+  describe "withdraw_to_wallet_by_user/2" do
+    test "withdraws amount from wallet balance", context do
+      assert {:ok, _wallet} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, 50.0)
+    end
+
+    test "returns error for insufficient funds", context do
+      assert {:error, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, 150.0)
+    end
+
+    test "returns error for invalid amount type", context do
+      assert {:error, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, "invalid")
+    end
   end
 
-  test "tranfer_to_wallet_by_user/3", context do
-    assert {:ok, _wallet} = Transactions.tranfer_to_wallet_by_user(context[:wallet1].user_id, context[:wallet2].number, 50.0)
-    assert {:error, _} = Transactions.tranfer_to_wallet_by_user(context[:wallet1].user_id, context[:wallet2].number, 150.0)
-    assert {:error, _} = Transactions.tranfer_to_wallet_by_user(context[:wallet1].user_id, context[:wallet2].number, "invalid")
+  describe "transfer_to_wallet_by_user/3" do
+    test "transfers amount between wallets", context do
+      assert {:ok, _wallet} = Transactions.transfer_to_wallet_by_user(context[:wallet1].user_id, context[:wallet2].number, 50.0)
+    end
+
+    test "returns error for transferring to same wallet", context do
+      assert {:error, _} = Transactions.transfer_to_wallet_by_user(context[:wallet1].user_id, context[:wallet1].number, 50.0)
+    end
+
+    test "returns error for insufficient funds", context do
+      assert {:error, _} = Transactions.transfer_to_wallet_by_user(context[:wallet1].user_id, context[:wallet2].number, 150.0)
+    end
+
+    test "returns error for invalid amount type", context do
+      assert {:error, _} = Transactions.transfer_to_wallet_by_user(context[:wallet1].user_id, context[:wallet2].number, "invalid")
+    end
   end
 end
