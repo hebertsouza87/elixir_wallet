@@ -55,5 +55,24 @@ defmodule Wallet.WalletsTest do
     test "get_wallet_by_number returns error for non-existing number" do
       assert {:not_found, _} = Wallets.get_wallet_by_number(-1)
     end
+
+    test "get_and_lock_wallet_by_user locks and returns the wallet for a given user_id" do
+      {:ok, wallet} = Wallets.create_wallet(@valid_attrs)
+      assert {:ok, %Wallet{}} = Wallets.get_and_lock_wallet_by_user(wallet.user_id)
+    end
+
+    test "get_and_lock_wallet_by_user returns error for non-existing user_id" do
+      non_existing_user_id = "00000000-0000-0000-0000-000000000000"
+      assert {:error, "Wallet not found"} = Wallets.get_and_lock_wallet_by_user(non_existing_user_id)
+    end
+
+    test "get_and_lock_wallet_by_number locks and returns the wallet for a given wallet number" do
+      {:ok, wallet} = Wallets.create_wallet(@valid_attrs)
+      assert {:ok, %Wallet{}} = Wallets.get_and_lock_wallet_by_number(wallet.number)
+    end
+
+    test "get_and_lock_wallet_by_number returns error for non-existing number" do
+      assert {:error, "Wallet not found"} = Wallets.get_and_lock_wallet_by_number("-1")
+    end
   end
 end
