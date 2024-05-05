@@ -5,7 +5,7 @@ defmodule WalletWeb.WalletController.TransferJSON do
       amount: Decimal.to_float(transfer.amount),
       wallet_origin_number: transfer.wallet_origin_number,
       wallet_destination_number: transfer.wallet_destination_number,
-      wallet_id: transfer.wallet_id,
+      wallet_origin_id: transfer.wallet_origin_id,
       operation: transfer.operation
     }
   end

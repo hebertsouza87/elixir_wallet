@@ -27,7 +27,8 @@ defmodule Wallet.Transactions do
         Wallets.update_wallet_balance(wallet, new_balance)
       end)
       |> create_transaction_multi(%{
-          wallet_id: wallet.id,
+          wallet_origin_id: wallet.id,
+          wallet_origin_number: wallet.number,
           amount: amount,
           operation: operation,
         }, :create_transaction)
@@ -65,14 +66,18 @@ defmodule Wallet.Transactions do
         amount: amount,
         operation: :transfer,
         wallet_destination_number: to_wallet.number,
-        wallet_origin_number: from_wallet.number
+        wallet_destination_id: to_wallet.id,
+        wallet_origin_number: from_wallet.number,
+        wallet_origin_id: from_wallet.id,
       }, :create_transaction_from)
       |> create_transaction_multi(%{
         wallet_id: to_wallet.id,
         amount: amount,
         operation: :transfer,
         wallet_destination_number: to_wallet.number,
-        wallet_origin_number: from_wallet.number
+        wallet_destination_id: to_wallet.id,
+        wallet_origin_number: from_wallet.number,
+        wallet_origin_id: from_wallet.id,
       }, :create_transaction_to)
 
       case Repo.transaction(multi) do
