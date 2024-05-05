@@ -11,10 +11,16 @@ services:
       - postgres_data:/var/lib/postgresql/data
   web:
     image: wallet_api
+    environment:
+      DATABASE_HOST: db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: wallet_dev
+      DATABASE_PORT: 5432
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "mix ecto.migrate && mix phx.server"
+    command: sh -c "mix ecto.setup && mix phx.server"
     volumes:
       - .:/app
     ports:
