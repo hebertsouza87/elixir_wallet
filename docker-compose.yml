@@ -1,4 +1,34 @@
 services:
+  web:
+    image: wallet_api
+    environment:
+      DATABASE_HOST: db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: wallet_dev
+      DATABASE_PORT: 5432
+      KAFKA_HOST: kafka
+      KAFKA_PORT: 9092
+      KAFKA_CONSUMER_TOPICS: FinancialTransactions
+      KAFKA_CONSUMER_GROUP: wallet_api
+      KAFKA_DEFAULT_TOPIC: FinancialTransactions
+      KAFKA_PRODUCER_TOPICS: FinancialTransactions
+      KAFKA_SYNC_TIMEOUT: 2000
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_HOST://your_local_ip:29092
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh -c "mix ecto.setup && mix phx.server"
+    volumes:
+      - .:/app
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
   db:
     image: postgres:16.2
     ports:
@@ -9,23 +39,32 @@ services:
       POSTGRES_DB: wallet_dev
     volumes:
       - postgres_data:/var/lib/postgresql/data
-  web:
-    image: wallet_api
-    environment:
-      DATABASE_HOST: db
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: postgres
-      DATABASE_NAME: wallet_dev
-      DATABASE_PORT: 5432
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: sh -c "mix ecto.setup && mix phx.server"
-    volumes:
-      - .:/app
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zookeeper:
+    image: 'zookeeper:latest'
     ports:
-      - "4000:4000"
+      - '2181:2181'
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://127.0.0.1:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     depends_on:
-      - db
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 volumes:
   postgres_data:
