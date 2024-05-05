@@ -2,8 +2,10 @@ defmodule WalletWeb.ResponseHandler do
   import Plug.Conn
   import Phoenix.Controller
 
+  alias Wallet.Transaction
   alias Wallet.Wallet
   alias WalletWeb.WalletController.WalletJSON
+  alias WalletWeb.WalletController.TransferJSON
 
   def render_response(conn, status, data) do
     conn
@@ -13,6 +15,10 @@ defmodule WalletWeb.ResponseHandler do
 
   def handle_response({status, %Wallet{} = wallet}, conn) do
     render_response(conn, get_http_status(status), WalletJSON.render(wallet))
+  end
+
+  def handle_response({status, %Transaction{} = wallet}, conn) do
+    render_response(conn, get_http_status(status), TransferJSON.render(wallet))
   end
 
   def handle_response({status, data}, conn) when is_map(data) do
