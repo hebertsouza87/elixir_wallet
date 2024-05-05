@@ -5,7 +5,6 @@ defmodule Wallet.Factory do
     %Wallet.Wallet{
       user_id: Ecto.UUID.generate(),
       balance: Decimal.new("100.0"),
-      number: 5789
     }
   end
 end

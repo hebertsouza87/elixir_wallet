@@ -60,7 +60,7 @@ defmodule Wallet.Wallets do
   def get_and_lock_wallet_by_user(user_id) do
     query = from w in Wallet, where: w.user_id == ^user_id, lock: "FOR UPDATE"
     case Repo.one(query) do
-      nil -> {:error, "Wallet not found"}
+      nil -> {:not_found, "Wallet not found"}
       wallet -> {:ok, wallet}
     end
   end
@@ -68,7 +68,7 @@ defmodule Wallet.Wallets do
   def get_and_lock_wallet_by_number(wallet_number) do
     query = from w in Wallet, where: w.number == ^wallet_number, lock: "FOR UPDATE"
     case Repo.one(query) do
-      nil -> {:error, "Wallet not found"}
+      nil -> {:not_found, "Wallet not found"}
       wallet -> {:ok, wallet}
     end
   end
