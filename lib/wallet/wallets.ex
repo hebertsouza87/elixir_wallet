@@ -17,6 +17,11 @@ defmodule Wallet.Wallets do
     end
   end
 
+  def update_wallet_balance(wallet, new_balance) do
+    Wallet.changeset(wallet, %{balance: new_balance})
+    |> update()
+  end
+
   def get_wallet_by_user(user_id) do
     case Repo.get_by(Wallet, user_id: user_id) do
       nil -> {:error, {:not_found, "Wallet not found"}}

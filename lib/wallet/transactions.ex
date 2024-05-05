@@ -2,7 +2,6 @@ defmodule Wallet.Transactions do
   alias Ecto.Multi
   alias Wallet.Repo
   alias Wallet.Wallets
-  alias Wallet.Wallet
 
   def add_to_wallet_by_user(user_id, amount) do
     with :ok <- validate_amount(amount),
@@ -74,8 +73,7 @@ defmodule Wallet.Transactions do
   end
 
   defp update_wallet_balance(wallet, new_balance) do
-    Wallet.changeset(wallet, %{balance: new_balance})
-    |> Wallets.update()
+    Wallets.update_wallet_balance(wallet, new_balance)
   end
 
   defp correct_decimal_places?(amount) do
