@@ -2,12 +2,20 @@ defmodule Wallet.Transactions do
   alias Ecto.Multi
   alias Wallet.Repo
   alias Wallet.Wallets
+  alias Wallet.Transaction
+
+  def create_transaction(attrs \\ %{}) do
+    %Transaction{}
+    |> Transaction.changeset(attrs)
+    |> Repo.insert(returning: true)
+  end
 
   def add_to_wallet_by_user(user_id, amount) do
     with :ok <- validate_amount(amount),
          {:ok, wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
          new_balance <- calculate_new_balance(wallet, amount, :add) do
       update_wallet_balance(wallet, new_balance)
+      create_transaction(%{wallet_id: wallet.id, amount: amount, operation: :deposit})
     else
       error -> error
     end
@@ -19,6 +27,7 @@ defmodule Wallet.Transactions do
          new_balance <- calculate_new_balance(wallet, amount, :sub),
          :ok <- validate_sufficient_funds(new_balance) do
       update_wallet_balance(wallet, new_balance)
+      create_transaction(%{wallet_id: wallet.id, amount: amount, operation: :withdraw})
     else
       error -> error
     end
