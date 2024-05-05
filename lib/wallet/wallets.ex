@@ -1,4 +1,5 @@
 defmodule Wallet.Wallets do
+  import Ecto.Query
   alias Wallet.Repo
   alias Wallet.Wallet
 
@@ -16,11 +17,38 @@ defmodule Wallet.Wallets do
     end
   end
 
-  def get_wallet_by_user(user_id) do
-    Repo.get_by(Wallet, user_id: user_id)
+  def update_wallet_balance(wallet, new_balance) do
+    Wallet.changeset(wallet, %{balance: new_balance})
+    |> update()
   end
 
-  def get_wallet_by_number(number) do
-    Repo.get_by(Wallet, number: number)
+  def get_wallet_by_user(user_id) do
+    case Repo.get_by(Wallet, user_id: user_id) do
+      nil -> {:error, {:not_found, "Wallet not found"}}
+      wallet -> {:ok, wallet}
+    end
+  end
+
+  def get_wallet_by_number(wallet_number) do
+    case Repo.get_by(Wallet, number: wallet_number) do
+      nil -> {:error, {:not_found, "Wallet not found"}}
+      wallet -> {:ok, wallet}
+    end
+  end
+
+  def get_and_lock_wallet_by_user(user_id) do
+    query = from w in Wallet, where: w.user_id == ^user_id, lock: "FOR UPDATE"
+    case Repo.one(query) do
+      nil -> {:error, "Wallet not found"}
+      wallet -> {:ok, wallet}
+    end
+  end
+
+  def get_and_lock_wallet_by_number(wallet_number) do
+    query = from w in Wallet, where: w.number == ^wallet_number, lock: "FOR UPDATE"
+    case Repo.one(query) do
+      nil -> {:error, "Wallet not found"}
+      wallet -> {:ok, wallet}
+    end
   end
 end
