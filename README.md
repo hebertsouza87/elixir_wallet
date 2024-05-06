@@ -24,7 +24,6 @@ sequenceDiagram
     API Gateway ->> Usuário: Resposta
 
 ```
-![Diagrama UML](https://www.mermaidchart.com/raw/bfa94499-b7d3-492d-b732-ce6b97bcea7a?theme=light&version=v0.1&format=svg)
 
 ## Como executar
 
