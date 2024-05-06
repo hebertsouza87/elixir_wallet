@@ -1,13 +1,16 @@
 defmodule Wallet.Transactions do
+  @moduledoc """
+  Módulo responsável por lidar com transações de carteira.
+  """
+
   alias Ecto.Multi
   alias Wallet.Repo
   alias Wallet.Wallets
   alias Wallet.Transaction
 
-  defp create_transaction_multi(multi, attrs, operation_name) do
-    Multi.insert(multi, operation_name, Transaction.changeset(%Transaction{}, attrs))
-  end
-
+  @doc """
+  Adiciona uma quantidade à carteira de um usuário.
+  """
   def add_to_wallet_by_user(user_id, amount) do
     with :ok <- validate_amount(amount),
          {:ok, wallet} <- Wallets.get_wallet_by_user(user_id),
@@ -19,21 +22,9 @@ defmodule Wallet.Transactions do
     end
   end
 
-  defp build_transaction(wallet, amount) do
-    %Transaction{
-      id: Ecto.UUID.generate(),
-      amount: amount,
-      operation: :deposit,
-      wallet_origin_id: wallet.id,
-      wallet_origin_number: wallet.number
-    }
-  end
-
-  # Opcão sem kafka
-  # def add_to_wallet_by_user(user_id, amount) do
-  #   change_balance(user_id, amount, :deposit) //Caso queria fazer sem kafka (e apaga tudo acima)
-  # end
-
+  @doc """
+  Registra uma transação.
+  """
   def register_transaction(transaction_json) do
     with :ok <- validate_amount(transaction_json["amount"]),
     {:ok, wallet} <- Wallets.get_and_lock_wallet_by_number(transaction_json["wallet_origin_number"]),
@@ -56,39 +47,16 @@ defmodule Wallet.Transactions do
   end
 end
 
+  @doc """
+  Retira uma quantidade da carteira de um usuário.
+  """
   def withdraw_to_wallet_by_user(user_id, amount) do
     change_balance(user_id, amount, :withdraw)
   end
 
-  defp change_balance(user_id, amount, operation) do
-    with :ok <- validate_amount(amount),
-         {:ok, wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
-         new_balance <- calculate_new_balance(wallet, amount, operation),
-         :ok <- validate_sufficient_funds(new_balance) do
-
-      multi = Multi.new()
-      |> Multi.run(:update_wallet_balance, fn _repo, _changes ->
-        Wallets.update_wallet_balance(wallet, new_balance)
-      end)
-      |> create_transaction_multi(%{
-          wallet_origin_id: wallet.id,
-          wallet_origin_number: wallet.number,
-          amount: amount,
-          operation: operation,
-        }, :create_transaction)
-
-      case Repo.transaction(multi) do
-        {:ok, %{create_transaction: created_transaction}} ->
-          {:ok, created_transaction}
-
-        {:error, error, message, _} ->
-          {:error, {error, message}}
-      end
-    else
-      error -> error
-    end
-  end
-
+  @doc """
+  Transfere uma quantidade de uma carteira para outra.
+  """
   def transfer_to_wallet_by_user(user_id, to_wallet_number, amount) do
     with :ok <- validate_amount(amount),
          {:ok, from_wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
@@ -126,6 +94,49 @@ end
 
       case Repo.transaction(multi) do
         {:ok, %{create_transaction_from: created_transaction}} ->
+          {:ok, created_transaction}
+
+        {:error, error, message, _} ->
+          {:error, {error, message}}
+      end
+    else
+      error -> error
+    end
+  end
+
+  defp create_transaction_multi(multi, attrs, operation_name) do
+    Multi.insert(multi, operation_name, Transaction.changeset(%Transaction{}, attrs))
+  end
+
+  defp build_transaction(wallet, amount) do
+    %Transaction{
+      id: Ecto.UUID.generate(),
+      amount: amount,
+      operation: :deposit,
+      wallet_origin_id: wallet.id,
+      wallet_origin_number: wallet.number
+    }
+  end
+
+  defp change_balance(user_id, amount, operation) do
+    with :ok <- validate_amount(amount),
+         {:ok, wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
+         new_balance <- calculate_new_balance(wallet, amount, operation),
+         :ok <- validate_sufficient_funds(new_balance) do
+
+      multi = Multi.new()
+      |> Multi.run(:update_wallet_balance, fn _repo, _changes ->
+        Wallets.update_wallet_balance(wallet, new_balance)
+      end)
+      |> create_transaction_multi(%{
+          wallet_origin_id: wallet.id,
+          wallet_origin_number: wallet.number,
+          amount: amount,
+          operation: operation,
+        }, :create_transaction)
+
+      case Repo.transaction(multi) do
+        {:ok, %{create_transaction: created_transaction}} ->
           {:ok, created_transaction}
 
         {:error, error, message, _} ->
