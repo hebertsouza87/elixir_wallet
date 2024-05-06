@@ -3,6 +3,8 @@ defmodule Wallet.Transactions do
   Módulo responsável por lidar com transações de carteira.
   """
 
+  require Logger
+
   alias Ecto.Multi
   alias Wallet.Repo
   alias Wallet.Wallets
@@ -12,10 +14,13 @@ defmodule Wallet.Transactions do
   Adiciona uma quantidade à carteira de um usuário.
   """
   def add_to_wallet_by_user(user_id, amount) do
+    Logger.info("Adding #{amount} to wallet of user #{user_id}")
     with :ok <- validate_amount(amount),
          {:ok, wallet} <- Wallets.get_wallet_by_user(user_id),
          transaction = build_transaction(wallet, amount),
          :ok <- Wallet.Kafka.Producer.send_deposit(transaction) do
+          Logger.info("Deposit sent to Kafka, transaction: #{inspect(transaction)}")
+          {:ok, transaction}
       {:ok, transaction}
     else
       error -> error
@@ -26,6 +31,7 @@ defmodule Wallet.Transactions do
   Registra uma transação.
   """
   def register_transaction(transaction_json) do
+    Logger.info("Registering transaction: #{inspect(transaction_json)}")
     with :ok <- validate_amount(transaction_json["amount"]),
     {:ok, wallet} <- Wallets.get_and_lock_wallet_by_number(transaction_json["wallet_origin_number"]),
     new_balance <- calculate_new_balance(wallet, transaction_json["amount"], transaction_json["operation"]),
@@ -39,6 +45,7 @@ defmodule Wallet.Transactions do
 
     case Repo.transaction(multi) do
       {:ok, %{create_transaction: created_transaction}} ->
+        Logger.info("Transaction registered: #{inspect(created_transaction)}")
         {:ok, created_transaction}
 
       {:error, error, message, _} ->
@@ -58,6 +65,7 @@ end
   Transfere uma quantidade de uma carteira para outra.
   """
   def transfer_to_wallet_by_user(user_id, to_wallet_number, amount) do
+    Logger.info("Transferring from wallet of user #{user_id} to wallet #{to_wallet_number}")
     with :ok <- validate_amount(amount),
          {:ok, from_wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
          {:ok, to_wallet} <- Wallets.get_and_lock_wallet_by_number(to_wallet_number),
@@ -94,6 +102,7 @@ end
 
       case Repo.transaction(multi) do
         {:ok, %{create_transaction_from: created_transaction}} ->
+          Logger.info("Transaction registered")
           {:ok, created_transaction}
 
         {:error, error, message, _} ->
@@ -119,6 +128,7 @@ end
   end
 
   defp change_balance(user_id, amount, operation) do
+    Logger.info("Changing balance of user #{user_id} by #{operation}")
     with :ok <- validate_amount(amount),
          {:ok, wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
          new_balance <- calculate_new_balance(wallet, amount, operation),
@@ -137,6 +147,7 @@ end
 
       case Repo.transaction(multi) do
         {:ok, %{create_transaction: created_transaction}} ->
+          Logger.info("Transaction registered")
           {:ok, created_transaction}
 
         {:error, error, message, _} ->
