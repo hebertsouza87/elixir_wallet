@@ -18,20 +18,24 @@ defmodule Wallet.Transaction do
 
   def changeset(transaction, attrs) do
     transaction
-    |> cast(attrs, [:id, :amount, :operation, :wallet_origin_number, :wallet_destination_number, :wallet_origin_id, :wallet_destination_id])
-    |> validate_required([:amount, :operation, :wallet_origin_id])
+    |> cast(attrs, cast_fields())
+    |> validate_required_fields()
     |> validate_transfer_fields()
   end
 
-  defp validate_transfer_fields(changeset) do
-    operation = get_field(changeset, :operation)
-
-    case operation do
-      :transfer ->
-        changeset
-        |> validate_required([:wallet_origin_number, :wallet_destination_number, :wallet_destination_id])
-      _ ->
-        changeset
-    end
+  defp cast_fields do
+    [:id, :amount, :operation, :wallet_origin_number, :wallet_destination_number, :wallet_origin_id, :wallet_destination_id]
   end
+
+  defp validate_required_fields(changeset) do
+    changeset
+    |> validate_required([:amount, :operation, :wallet_origin_id])
+  end
+
+  defp validate_transfer_fields(changeset = %{changes: %{operation: :transfer}}) do
+    changeset
+    |> validate_required([:wallet_origin_number, :wallet_destination_number, :wallet_destination_id])
+  end
+
+  defp validate_transfer_fields(changeset), do: changeset
 end
