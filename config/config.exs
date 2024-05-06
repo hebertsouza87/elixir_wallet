@@ -63,6 +63,20 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Config Kafka
+config :kaffe,
+  consumer: [
+    endpoints: [{String.to_atom(System.get_env("KAFKA_HOST", "localhost")), String.to_integer(System.get_env("KAFKA_PORT", "9092"))}],
+    topics: String.split(System.get_env("KAFKA_CONSUMER_TOPICS", "FinancialTransactions"), ",", trim: true),
+    consumer_group: System.get_env("KAFKA_CONSUMER_GROUP", "wallet_api"),
+    message_handler: Wallet.Kafka.Consumer
+  ],
+  producer: [
+    endpoints: [{String.to_atom(System.get_env("KAFKA_HOST", "localhost")), String.to_integer(System.get_env("KAFKA_PORT", "9092"))}],
+    default_topic: System.get_env("KAFKA_DEFAULT_TOPIC", "FinancialTransactions"),
+    topics: String.split(System.get_env("KAFKA_PRODUCER_TOPICS", "FinancialTransactions"), ",", trim: true)
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

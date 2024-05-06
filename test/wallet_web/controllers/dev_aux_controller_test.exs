@@ -1,6 +1,5 @@
 defmodule WalletWeb.DevAuxControllerTest do
   use WalletWeb.ConnCase
-  alias Authentication.Helper
   import WalletWeb.Endpoint, warn: false
 
   setup do
