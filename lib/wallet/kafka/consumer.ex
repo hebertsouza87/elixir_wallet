@@ -7,13 +7,14 @@ defmodule Wallet.Kafka.Consumer do
   end
 
   defp handle_message("deposit", value) do
+    Logget.info("Processing deposit: " <> value)
     value
     |> Jason.decode!()
     |> Wallet.Transactions.register_transaction()
   end
 
   defp handle_message(key, message) do
-    IO.inspect("Mesage not expeted: " <> key <> " - " <> message)
+    Logger.error("Message not expected: " <> key <> " - " <> message)
     :error
   end
 end
