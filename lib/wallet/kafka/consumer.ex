@@ -25,9 +25,11 @@ defmodule Wallet.Kafka.Consumer do
 
   def handle_message("deposit", value) do
     Logger.info("Processing deposit: " <> value)
-    value
+    json = value
     |> Jason.decode!()
-    |> Transactions.register_transaction()
+    transaction = Transactions.register_transaction(json)
+    :telemetry.execute([:kafka, :deposit, :consumer], %{id: json["id"]})
+    transaction
   end
 
   def handle_message(key, message) do
