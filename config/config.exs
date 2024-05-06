@@ -69,6 +69,7 @@ config :kaffe,
     endpoints: [{String.to_atom(System.get_env("KAFKA_HOST", "localhost")), String.to_integer(System.get_env("KAFKA_PORT", "9092"))}],
     topics: String.split(System.get_env("KAFKA_CONSUMER_TOPICS", "FinancialTransactions"), ",", trim: true),
     consumer_group: System.get_env("KAFKA_CONSUMER_GROUP", "wallet_api"),
+    message_handler: Wallet.Kafka.Consumer
   ],
   producer: [
     endpoints: [{String.to_atom(System.get_env("KAFKA_HOST", "localhost")), String.to_integer(System.get_env("KAFKA_PORT", "9092"))}],

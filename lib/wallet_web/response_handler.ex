@@ -5,7 +5,7 @@ defmodule WalletWeb.ResponseHandler do
   alias Wallet.Transaction
   alias Wallet.Wallet
   alias WalletWeb.WalletController.WalletJSON
-  alias WalletWeb.WalletController.TransferJSON
+  alias WalletWeb.WalletController.TransactionJSON
 
   def render_response(conn, status, data) do
     conn
@@ -17,8 +17,8 @@ defmodule WalletWeb.ResponseHandler do
     render_response(conn, get_http_status(status), WalletJSON.render(wallet))
   end
 
-  def handle_response({status, %Transaction{} = wallet}, conn) do
-    render_response(conn, get_http_status(status), TransferJSON.render(wallet))
+  def handle_response({status, %Transaction{} = transaction}, conn) do
+    render_response(conn, get_http_status(status), TransactionJSON.render(transaction))
   end
 
   def handle_response({status, data}, conn) when is_map(data) do

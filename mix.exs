@@ -47,7 +47,7 @@ defmodule Wallet.MixProject do
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.2"},
       {:joken, "~> 2.6"},
-      {:kaffe, "~> 1.9"},
+      {:kaffe, "~> 1.25.0"},
       {:ecto_sqlite3, "~> 0.15.1", only: :test},
       {:excoveralls, "~> 0.18.1", only: [:test, :dev]},
       {:ex_machina, "~> 2.7", only: :test}

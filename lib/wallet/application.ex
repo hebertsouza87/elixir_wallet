@@ -18,7 +18,12 @@ defmodule Wallet.Application do
       # Start a worker by calling: Wallet.Worker.start_link(arg)
       # {Wallet.Worker, arg},
       # Start to serve requests, typically the last entry
-      WalletWeb.Endpoint
+      WalletWeb.Endpoint,
+      %{
+        id: Kaffe.GroupMemberSupervisor,
+        start: {Kaffe.GroupMemberSupervisor, :start_link, []},
+        type: :supervisor
+      }
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
