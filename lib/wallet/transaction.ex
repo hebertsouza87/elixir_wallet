@@ -18,7 +18,7 @@ defmodule Wallet.Transaction do
 
   def changeset(transaction, attrs) do
     transaction
-    |> cast(attrs, [:amount, :operation, :wallet_origin_number, :wallet_destination_number, :wallet_origin_id, :wallet_destination_id])
+    |> cast(attrs, [:id, :amount, :operation, :wallet_origin_number, :wallet_destination_number, :wallet_origin_id, :wallet_destination_id])
     |> validate_required([:amount, :operation, :wallet_origin_id])
     |> validate_transfer_fields()
   end
