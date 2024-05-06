@@ -29,6 +29,11 @@ defmodule Wallet.DataCase do
 
   setup tags do
     Wallet.DataCase.setup_sandbox(tags)
+
+    unless tags[:async] do
+      Ecto.Adapters.SQL.Sandbox.mode(Wallet.Repo, {:shared, self()})
+    end
+
     :ok
   end
 

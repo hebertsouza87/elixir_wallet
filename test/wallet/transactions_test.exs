@@ -1,5 +1,5 @@
 defmodule Wallet.TransactionsTest do
-  use ExUnit.Case
+  use Wallet.DataCase
   alias Wallet.Transactions
   alias Wallet.Wallets
 
