@@ -1,9 +1,8 @@
 defmodule Wallet.Kafka.ConsumerTest do
   import Wallet.Factory
 
-  use ExUnit.Case
+  use Wallet.DataCase, async: false
   alias Wallet.Kafka.Consumer
-  alias Wallet.Wallet
 
   setup do
     wallet1 = insert(:wallet)
@@ -25,9 +24,12 @@ defmodule Wallet.Kafka.ConsumerTest do
     value = Jason.encode!(%{
       "amount" => 100.0,
       "wallet_origin_id" => wallet1.id,
-      "wallet_origin_number" => wallet1.number
+      "wallet_origin_number" => wallet1.number,
+      "operation" => "deposit"
     })
-    assert Consumer.handle_message("deposit", value) == {:ok, %Wallet{}}
+    {:ok, transaction} = Consumer.handle_message("deposit", value)
+    assert transaction.amount == Decimal.new("100.0")
+    assert transaction.wallet_origin_id == wallet1.id
   end
 
   test "handle_message/2 returns :error for an unexpected message", _context do
