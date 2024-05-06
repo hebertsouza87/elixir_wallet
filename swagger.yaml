@@ -1,0 +1,150 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Wallet API
+  description: API for managing digital wallets
+paths:
+  /api/dev/token:
+    post:
+      summary: Generate a JWT token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserId'
+      responses:
+        '201':
+          description: JWT token generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+  /api/wallets:
+    post:
+      summary: Create a wallet
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Wallet created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletResponse'
+        '400':
+          description: Wallet already exists for this user_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/deposit:
+    post:
+      summary: Deposit an amount to the user's wallet
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Amount'
+      responses:
+        '200':
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+  /api/withdraw:
+    post:
+      summary: Withdraw an amount from the user's wallet
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Amount'
+      responses:
+        '200':
+          description: Withdrawal successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+  /api/transfer:
+    post:
+      summary: Transfer an amount from the user's wallet to another wallet
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transfer'
+      responses:
+        '200':
+          description: Transfer successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    UserId:
+      type: object
+      properties:
+        user_id:
+          type: string
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+    WalletResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        number:
+          type: integer
+        balance:
+          type: number
+        user_id:
+          type: string
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    Amount:
+      type: object
+      properties:
+        amount:
+          type: number
+    Transfer:
+      type: object
+      properties:
+        amount:
+          type: number
+        to_wallet_number:
+          type: integer
+    TransactionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        amount:
+          type: number
+        operation:
+          type: string
+        wallet_destination_number:
+          type: integer
+        wallet_origin_number:
+          type: integer
+        wallet_origin_id:
+          type: string
