@@ -14,16 +14,19 @@ defmodule Wallet.Transactions do
   Adiciona uma quantidade à carteira de um usuário.
   """
   def add_to_wallet_by_user(user_id, amount) do
+    :telemetry.execute([:deposit, :started], %{amount: amount})
     Logger.info("Adding #{amount} to wallet of user #{user_id}")
     with :ok <- validate_amount(amount),
-         {:ok, wallet} <- Wallets.get_wallet_by_user(user_id),
-         transaction = build_transaction(wallet, amount),
-         {:ok, _} <- Wallet.Kafka.Producer.send_deposit(transaction) do
-          Logger.info("Deposit sent to Kafka, transaction: #{inspect(transaction)}")
-          {:ok, transaction}
+        {:ok, wallet} <- Wallets.get_wallet_by_user(user_id),
+        transaction = build_transaction(wallet, amount),
+        {:ok, _} <- Wallet.Kafka.Producer.send_deposit(transaction) do
+      Logger.info("Deposit sent to Kafka, transaction: #{inspect(transaction)}")
+      :telemetry.execute([:deposit, :created], %{amount: amount})
       {:ok, transaction}
     else
-      error -> error
+      error ->
+        :telemetry.execute([:withdraw, :error], %{amount: amount})
+        error
     end
   end
 
@@ -57,14 +60,24 @@ end
   @doc """
   Retira uma quantidade da carteira de um usuário.
   """
-  def withdraw_to_wallet_by_user(user_id, amount) do
-    change_balance(user_id, amount, :withdraw)
-  end
+    def withdraw_to_wallet_by_user(user_id, amount) do
+      :telemetry.execute([:withdraw, :started], %{amount: amount})
+
+      with {:ok, balance} <- change_balance(user_id, amount, :withdraw) do
+        :telemetry.execute([:withdraw, :created], %{amount: amount})
+        {:ok, balance}
+      else
+        error ->
+        :telemetry.execute([:withdraw, :error], %{amount: amount})
+        error
+      end
+    end
 
   @doc """
   Transfere uma quantidade de uma carteira para outra.
   """
   def transfer_to_wallet_by_user(user_id, to_wallet_number, amount) do
+    :telemetry.execute([:transfer, :started], %{amount: amount})
     Logger.info("Transferring from wallet of user #{user_id} to wallet #{to_wallet_number}")
     with :ok <- validate_amount(amount),
          {:ok, from_wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
@@ -103,9 +116,11 @@ end
       case Repo.transaction(multi) do
         {:ok, %{create_transaction_from: created_transaction}} ->
           Logger.info("Transaction registered")
+          :telemetry.execute([:transfer, :created], %{amount: amount})
           {:ok, created_transaction}
 
         {:error, error, message, _} ->
+          :telemetry.execute([:transfer, :error], %{amount: amount})
           {:error, {error, message}}
       end
     else
