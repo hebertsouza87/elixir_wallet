@@ -84,11 +84,4 @@ curl --location 'http://localhost:4000/api/transfer' \
 "to_wallet_number": 2}'
 ```
 
-## Como executar
-
-1. Clone o repositório.
-2. Instale as dependências com `mix deps.get`.
-3. Crie e migre o banco de dados com `mix ecto.setup`.
-4. Inicie o servidor Phoenix com `mix phx.server`.
-
-Agora você pode visitar [`localhost:4000`](http://localhost:4000) do seu navegador.
+## Swagger: https://github.com/hebertsouza87/elixir_wallet/blob/main/swagger.yaml
