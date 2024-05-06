@@ -18,7 +18,7 @@ defmodule Wallet.Transactions do
     with :ok <- validate_amount(amount),
          {:ok, wallet} <- Wallets.get_wallet_by_user(user_id),
          transaction = build_transaction(wallet, amount),
-         :ok <- Wallet.Kafka.Producer.send_deposit(transaction) do
+         {:ok, _} <- Wallet.Kafka.Producer.send_deposit(transaction) do
           Logger.info("Deposit sent to Kafka, transaction: #{inspect(transaction)}")
           {:ok, transaction}
       {:ok, transaction}
