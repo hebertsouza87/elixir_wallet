@@ -22,6 +22,16 @@ defmodule WalletWeb.Router do
     end
   end
 
+  def swagger_info do
+    %{
+      info: %{
+        version: "1.0",
+        title: "Wallet API",
+        description: "API for managing wallet transactions"
+      }
+    }
+  end
+
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:wallet, :dev_routes) do
     # If you want to use the LiveDashboard in production, you should put

@@ -77,6 +77,14 @@ config :kaffe,
     topics: String.split(System.get_env("KAFKA_PRODUCER_TOPICS", "FinancialTransactions"), ",", trim: true)
   ]
 
+config :wallet, :phoenix_swagger,
+  swagger_files: %{
+    "priv/static/swagger.json" => [
+      router: WalletWeb.Router,
+      endpoint: WalletWeb.Endpoint
+    ]
+  }
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

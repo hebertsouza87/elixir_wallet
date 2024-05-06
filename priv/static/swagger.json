@@ -1,0 +1,35 @@
+{
+  "paths": {},
+  "swagger": "2.0",
+  "definitions": {
+    "/wallets": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "wallet"
+        ],
+        "operationId": "WalletController.create",
+        "parameters": [
+          {
+            "required": true,
+            "description": "JWT token",
+            "type": "string",
+            "name": "Authorization",
+            "in": "header"
+          }
+        ],
+        "description": "Creates a new wallet"
+      }
+    }
+  },
+  "host": "localhost:4000",
+  "info": {
+    "title": "Wallet API",
+    "description": "API for managing wallet transactions",
+    "version": "1.0"
+  }
+}

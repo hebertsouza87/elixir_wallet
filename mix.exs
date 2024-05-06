@@ -9,7 +9,8 @@ defmodule Wallet.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      compilers: [:phoenix] ++ Mix.compilers ++ [:phoenix_swagger],
     ]
   end
 
@@ -39,6 +40,9 @@ defmodule Wallet.MixProject do
       {:bandit, "~> 1.2"},
       {:joken, "~> 2.6"},
       {:kaffe, "~> 1.25.0"},
+      {:phoenix_swagger, "~> 0.8.3"},
+      {:ex_json_schema, "~> 0.5"},
+      {:poison, "~> 3.0"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
       {:ecto_sqlite3, "~> 0.15.1", only: :test},

@@ -13,4 +13,34 @@ defmodule WalletWeb.WalletController do
 
     ResponseHandler.handle_response(result, conn)
   end
+
+  def swagger_definitions do
+    swagger_definitions_for_create()
+  end
+
+  defp swagger_definitions_for_create do
+    %{
+      "/api/wallets": %{
+        post: %{
+          tags: ["wallet"],
+          description: "Creates a new wallet",
+          operationId: "WalletController.create",
+          parameters: [jwt_auth_param()],
+          responses: %{
+            200 => %{description: "Success"}
+          }
+        }
+      }
+    }
+  end
+
+  defp jwt_auth_param do
+    %{
+      name: "Authorization",
+      in: "header",
+      description: "JWT token",
+      required: true,
+      type: "string"
+    }
+  end
 end
