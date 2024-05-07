@@ -9,6 +9,6 @@ defmodule WalletWeb.WalletController do
     conn
     |> Helper.get_user_id_from_conn()
     |> Wallets.create_wallet()
-    |> ResponseHandler.handle_response(conn, :created)
+    |> ResponseHandler.handle_response(:created, conn)
   end
 end

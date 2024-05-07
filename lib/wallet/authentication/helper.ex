@@ -25,7 +25,7 @@ defmodule Authentication.Helper do
          user_id when is_binary(user_id) <- claims |> Map.get("user_id") do
       {:ok, user_id}
     else
-      _ -> {:error, "Failed to get user_id from conn"}
+      _ -> {:unauthorized, "Failed to get user_id from conn"}
     end
   end
 

@@ -8,6 +8,7 @@ defmodule Wallet.Wallets do
     |> Wallet.changeset(%{user_id: user_id})
     |> Repo.insert(returning: true)
   end
+  def create_wallet({error, reason}) do {error, reason} end
 
   def update(changeset) do
     if changeset.valid? do

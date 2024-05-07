@@ -14,12 +14,15 @@ defmodule WalletWeb.ResponseHandler do
     |> json(data)
   end
 
-  def handle_response({:error, %Ecto.Changeset{} = changeset}, conn, _http_status) do
+  def handle_response({:error, %Ecto.Changeset{} = changeset}, _http_status, conn) do
     [first_error | _] = changeset.errors
     {field, {message, _}} = first_error
     render_response(conn, :bad_request, %{error: Atom.to_string(field) <> " " <> message})
   end
 
+  def handle_response({:unauthorized, reason}, _status, conn) do
+    render_response(conn, :unauthorized, %{error: reason})
+  end
   def handle_response({:error, reason}, _status, conn), do: render_response(conn, :internal_server_error, %{error: reason})
   def handle_response({:not_found, reason}, _status, conn), do: render_response(conn, :not_found, %{error: reason})
   def handle_response({:bad_request, reason}, _status, conn), do: render_response(conn, :bad_request, %{error: reason})
@@ -32,7 +35,7 @@ defmodule WalletWeb.ResponseHandler do
     render_response(conn, http_status, TransactionJSON.render(transaction))
   end
 
-  def handle_response({_, %Wallet{} = wallet}, conn, http_status) do
+  def handle_response({_, %Wallet{} = wallet}, http_status, conn) do
     render_response(conn, http_status, WalletJSON.render(wallet))
   end
 
