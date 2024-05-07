@@ -15,22 +15,25 @@ defmodule Wallet.Transactions do
   """
   def add_to_wallet_by_user(user_id, amount) do
     :telemetry.execute([:deposit, :started], %{amount: amount})
-
     Logger.info("Adding #{amount} to wallet of user #{user_id}")
-    with :ok <- validate_amount(amount),
-        transaction =
+
+    with :ok <- validate_amount(amount) do
           user_id
           |> Wallets.get_wallet_by_user()
-          |> build_transaction(amount),
-        {:ok, _} <- Wallet.Kafka.Producer.send_deposit(transaction) do
-      Logger.info("Deposit sent to Kafka, transaction: #{inspect(transaction)}")
-      :telemetry.execute([:deposit, :created], %{amount: amount})
-      transaction
+          |> build_transaction(amount)
+          |> Wallet.Kafka.Producer.send_deposit()
+          |> monitoring()
     else
       error ->
         :telemetry.execute([:withdraw, :error], %{amount: amount})
         error
     end
+  end
+
+  defp monitoring({:ok, %Transaction{} = transaction}) do
+    Logger.info("Deposit sent to Kafka")
+    :telemetry.execute([:deposit, :completed], %{amount: transaction.amount})
+    {:ok, transaction}
   end
 
   @doc """
