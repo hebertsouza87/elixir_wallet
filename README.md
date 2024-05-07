@@ -167,8 +167,7 @@ curl --location 'http://localhost:4000/api/transfer' \
 ### Swagger: https://github.com/hebertsouza87/elixir_wallet/blob/main/swagger.yaml
 
 
-
-Esta foi a arquitetura que montei pensando em implementar.
+## Como deveria ser
 
 Vou expor uma outra ideia de arquitetura mais complexa e completa, que atenderia melhor a solicitação, mas que seria inviável de implementar em tão pouco tempo.
 
