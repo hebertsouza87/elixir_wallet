@@ -31,6 +31,7 @@ defmodule Wallet.Transactions do
     :telemetry.execute([:deposit, :completed], %{amount: transaction.amount})
     {:ok, transaction}
   end
+  defp monitoring({:not_found, message}) do {:not_found, message} end
 
   @doc """
   Registra uma transação.
