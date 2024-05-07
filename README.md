@@ -17,7 +17,7 @@ Para identificação dos usuários, será utilizado o user_id vindo no token JWT
 
 A infraestrutura do projeto é baseada em uma arquitetura de microserviços gerenciada pelo Kubernetes. O diagrama a seguir mostra uma ideia de como deverá ser a inifraestrutura do ecosistema da aplicação.
 
-\```mermaid
+```mermaid
 graph LR
   User -->|Request| APIGateway
   APIGateway --> |Request| LoadBalancer
@@ -31,7 +31,7 @@ graph LR
   MultiAZ -->|Run Pods| BankAPI
   MultiAZ -->|Run Pods| AuditService
   MultiAZ -->|Run Pods| MonitoringService
-\```
+```
 
 ### Diagramas de Sequência
 
@@ -39,7 +39,7 @@ Os diagramas a seguir mostram como as operações de retirada/transferência e d
 
 #### Retirada/Transferência entre Carteiras
 
-\```mermaid
+```mermaid
 sequenceDiagram
     User ->> APIGateway: Request
     APIGateway ->> AuthService: Validate Token
@@ -53,11 +53,11 @@ sequenceDiagram
     APIGateway -->> User: Forward Response
     DigitalWallet ->> AuditService: Activity Logs
     AuditService ->> MonitoringService: Monitor Activities
-\```
+```
 
 #### Depósito
 
-\```mermaid
+```mermaid
 sequenceDiagram
     DigitalWallet ->> Kafka: Deposit Topic
     Kafka -->> DigitalWallet: Deposit Transaction
@@ -65,13 +65,13 @@ sequenceDiagram
     Database -->> DigitalWallet: Saved Operation
     DigitalWallet ->> AuditService: Activity Logs
     AuditService ->> MonitoringService: Monitor Activities
-\```
+```
 
 ### Modelo de Dados
 
 O modelo de dados do projeto consiste em duas tabelas: `Wallets` e `Transactions`. A tabela `Wallets` contém informações sobre as carteiras dos usuários, enquanto a tabela `Transactions` registra todas as transações realizadas, podendo ser utilizada para gerar extrado e auditoria.
 
-\```mermaid
+```mermaid
 classDiagram
     Wallets -- Transactions : has many
     class Wallets {
@@ -97,7 +97,8 @@ classDiagram
         index on walletOriginId
         index on walletDestinationId
     }
-\```
+```
+
 ## Como executar
 
 ### Sem Docker
@@ -165,7 +166,7 @@ Esta foi a arquitetura que montei pensando em implementar.
 
 Vou expor uma outra ideia de arquitetura mais complexa e completa, que atenderia melhor a solicitação, mas que seria inviável de implementar em tão pouco tempo.
 
-\```mermaid
+```mermaid
 sequenceDiagram
     User ->> APIGateway: Request
     APIGateway ->> AuthService: Validate Token
