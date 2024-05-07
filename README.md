@@ -1,30 +1,103 @@
-# Wallet API
+# Digital Wallet API
 
-## Descrição
+Simples API de cadastro de carteira digital, com operações básicas.
 
-Para a criação da arquitetura e implementação do código, vou abstrair alguns processos, como o serviço de autenticação, validação de fraudes, cadastro de usuários, etc. Nesse projeto vou me ater em implementar o serviço de carteira digital e, para identificação dos usuários, utilizarei o user_id vindo no token JWT.
+## Arquitetura
 
-O depósito irá postar em um tópico kafka e retornará os dados da transação e posteriormente a aplicação irá ler o tópico e realizar a operação de fato. A intenção ter uma arquitetura onde n serviços (pix, empréstimo, TED/TEF, etc) possam realizar depósito na conta mantendo a resiliência e escalabilidade.
+A arquitetura do projeto é projetada para ser resiliente e escalável, permitindo que vários serviços (pix, empréstimo, TED/TEF, etc) realizem depósitos na conta.
 
-A transferência e retirada são sincronos, pois dependem do saldo em conta e precisam ser uma transação atomica.
+O depósito posta em um tópico kafka que outro processo realiza a leitura e posterior gravação do registro no banco. Desta forma o depósito não depende da disponibilidade do banco de dados e exemplifica o processo de entrada de depósito que pode vir de outras origens.
 
-Aqui está um diagrama UML simples da arquitetura da API:
+A transferência e a retirada são síncronas, pois dependem do saldo em conta e precisam ser uma transação atômica.
 
-```mermaid
+Para identificação dos usuários, será utilizado o user_id vindo no token JWT.
+
+
+### Infraestrutura
+
+A infraestrutura do projeto é baseada em uma arquitetura de microserviços gerenciada pelo Kubernetes. O diagrama a seguir mostra uma ideia de como deverá ser a inifraestrutura do ecosistema da aplicação.
+
+\```mermaid
+graph LR
+  User -->|Request| APIGateway
+  APIGateway --> |Request| LoadBalancer
+  LoadBalancer -->|Distribute Request| Kubernetes
+  Kubernetes -->|Manage Pods| AutoScaling
+  AutoScaling -->|Scale Pods| MultiAZ
+  MultiAZ -->|Run Pods| DigitalWallet
+  MultiAZ -->|Run Pods| AuthService
+  MultiAZ -->|Run Pods| FraudService
+  MultiAZ -->|Run Pods| Database
+  MultiAZ -->|Run Pods| BankAPI
+  MultiAZ -->|Run Pods| AuditService
+  MultiAZ -->|Run Pods| MonitoringService
+\```
+
+### Diagramas de Sequência
+
+Os diagramas a seguir mostram como as operações de retirada/transferência e depósito são processadas.
+
+#### Retirada/Transferência entre Carteiras
+
+\```mermaid
 sequenceDiagram
-    Usuário ->> API Gateway: Solicitação
-    note right of API Gateway: Valida necessidade de renovação de token
-    API Gateway ->> Serviço de Autenticação: Renova token
-    Serviço de Autenticação ->> API Gateway: Token JWT renovado
-    API Gateway ->> Serviço de Fraudes: Verifica fraude
-    Serviço de Fraudes ->> API Gateway: Resposta da validação
-    API Gateway ->> Serviço de Carteira Digital: Solicitação de operação de carteira/transação
-    note right of Serviço de Carteira Digital: Processa a operação da carteira/transação
-    Serviço de Carteira Digital ->> API Gateway: Resposta da operação da carteira/transação
-    API Gateway ->> Usuário: Resposta
+    User ->> APIGateway: Request
+    APIGateway ->> AuthService: Validate Token
+    AuthService -->> APIGateway: Token Valid
+    APIGateway ->> FraudService: Check for Fraud
+    FraudService -->> APIGateway: No Fraud Detected
+    APIGateway ->> DigitalWallet: Forward Request
+    DigitalWallet ->> Database: CRUD Operations
+    Database -->> DigitalWallet: Saved Operation
+    DigitalWallet -->> APIGateway: Operation Response
+    APIGateway -->> User: Forward Response
+    DigitalWallet ->> AuditService: Activity Logs
+    AuditService ->> MonitoringService: Monitor Activities
+\```
 
-```
+#### Depósito
 
+\```mermaid
+sequenceDiagram
+    DigitalWallet ->> Kafka: Deposit Topic
+    Kafka -->> DigitalWallet: Deposit Transaction
+    DigitalWallet ->> Database: CRUD Operations
+    Database -->> DigitalWallet: Saved Operation
+    DigitalWallet ->> AuditService: Activity Logs
+    AuditService ->> MonitoringService: Monitor Activities
+\```
+
+### Modelo de Dados
+
+O modelo de dados do projeto consiste em duas tabelas: `Wallets` e `Transactions`. A tabela `Wallets` contém informações sobre as carteiras dos usuários, enquanto a tabela `Transactions` registra todas as transações realizadas, podendo ser utilizada para gerar extrado e auditoria.
+
+\```mermaid
+classDiagram
+    Wallets -- Transactions : has many
+    class Wallets {
+        +id (UUID)
+        balance (Decimal)
+        userId (UUID)
+        number (Serial)
+        inserted_at (DateTime)
+        updated_at (DateTime)
+        index on userId (unique)
+        index on number (unique)
+    }
+    class Transactions {
+        +id (UUID)
+        amount (Decimal)
+        walletOriginId (UUID)
+        walletDestinationId (UUID)
+        operation (String)
+        walletOriginNumber (Integer)
+        walletDestinationNumber (Integer)
+        inserted_at (DateTime)
+        updated_at (DateTime)
+        index on walletOriginId
+        index on walletDestinationId
+    }
+\```
 ## Como executar
 
 ### Sem Docker
@@ -84,4 +157,44 @@ curl --location 'http://localhost:4000/api/transfer' \
 "to_wallet_number": 2}'
 ```
 
-## Swagger: https://github.com/hebertsouza87/elixir_wallet/blob/main/swagger.yaml
+### Swagger: https://github.com/hebertsouza87/elixir_wallet/blob/main/swagger.yaml
+
+
+
+Esta foi a arquitetura que montei pensando em implementar.
+
+Vou expor uma outra ideia de arquitetura mais complexa e completa, que atenderia melhor a solicitação, mas que seria inviável de implementar em tão pouco tempo.
+
+\```mermaid
+sequenceDiagram
+    User ->> APIGateway: Request
+    APIGateway ->> AuthService: Validate Token
+    AuthService -->> APIGateway: Token Valid
+    APIGateway ->> FraudService: Check for Fraud
+    FraudService -->> APIGateway: No Fraud Detected
+    APIGateway ->> Transfer: Forward Request
+    Transfer ->> Balance: Reserv found
+    Balance -->> Transfer: Balance Details
+    Transfer ->> Kafka: Post topic
+    Kafka -->> Transfer: Saved topic
+    Transfer ->> Balance: Confirm operation
+    Balance ->> Transfer: Confirm operation
+    Transfer -->> APIGateway: Operation Response
+    APIGateway -->> User: Forward Response
+    Transfer ->> AuditService: Activity Logs
+    AuditService ->> MonitoringService: Monitor Activities
+```
+
+APIGateway: Ponto de entrada para todas as solicitações. Ele encaminha a solicitação para o serviço apropriado após a autenticação e a verificação de fraude.
+
+AuthService: Serviço é responsável por validar o token fornecido pelo usuário.
+
+UserService: Serviço responsável pelo cadastro de usuário.
+
+FraudService: Este serviço verifica se a solicitação é fraudulenta. Se não for, a solicitação é encaminhada para o próximo serviço.
+
+Transfer: Este serviço é responsável por realizar as transações financeiras. Ele interage com o serviço Balance para reservar fundos e confirmar a operação. Também é o serviço responsável por desfazer a transação se não for possível confirmar a transação com o balance (essa confirmação pode ser feita por uma fila o que mitigaria esse problema)
+
+Balance: Este serviço é responsável por gerir o saldo da conta. Ele reserva fundos quando solicitado pelo serviço Transfer e confirma a operação quando recebe a confirmação do serviço Transfer.
+
+DigitalWallet: Este serviço é responsável pelo cadastro das carteiras. Que não aparece nesse diagrama, pois ele seria consultado em outro momento que não o transacional.
