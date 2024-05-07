@@ -44,4 +44,8 @@ defmodule WalletWeb.ResponseHandler do
   def handle_response({status, data}, conn) when is_map(data) do
     render_response(conn, status, data)
   end
+
+  def handle_response({status, message}, conn) when is_binary(message) do
+    render_response(conn, status, %{error: message})
+  end
 end

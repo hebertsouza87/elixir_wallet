@@ -13,20 +13,16 @@ defmodule WalletWeb.TransactionController do
   end
 
   def withdraw(conn, %{"amount" => amount}) do
-    result = case Helper.get_user_id_from_conn(conn) do
-      {:ok, user_id} -> Transactions.withdraw_to_wallet_by_user(user_id, amount)
-      error -> error
-    end
-
-    ResponseHandler.handle_response(result, conn)
+    conn
+    |> Helper.get_user_id_from_conn!()
+    |> Transactions.withdraw_to_wallet_by_user(amount)
+    |> ResponseHandler.handle_response(:created, conn)
   end
 
   def transfer(conn, %{"amount" => amount, "to_wallet_number" => to_wallet_number}) do
-    result = case Helper.get_user_id_from_conn(conn) do
-      {:ok, user_id} -> Transactions.transfer_to_wallet_by_user(user_id, to_wallet_number, amount)
-      error -> error
-    end
-
-    ResponseHandler.handle_response(result, conn)
+    conn
+    |> Helper.get_user_id_from_conn!()
+    |> Transactions.transfer_to_wallet_by_user(to_wallet_number, amount)
+    |> ResponseHandler.handle_response(:created, conn)
   end
 end
