@@ -15,12 +15,12 @@ defmodule Wallet.WalletsTest do
     end
 
     test "create_wallet/1 with invalid data returns an error" do
-      assert {:invalid, _changeset} = Wallets.create_wallet(@invalid_attrs)
+      assert {:bad_request, _changeset} = Wallets.create_wallet(@invalid_attrs)
     end
 
     test "create_wallet/1 fails when wallet already exists for user_id" do
       Wallets.create_wallet(@valid_attrs)
-      assert {:invalid, _message} = Wallets.create_wallet(@valid_attrs)
+      assert {:bad_request, _message} = Wallets.create_wallet(@valid_attrs)
     end
 
     test "update/1 with valid changeset updates the wallet" do
@@ -33,7 +33,7 @@ defmodule Wallet.WalletsTest do
     test "update/1 with balance having more than two decimal places returns an error" do
       {:ok, wallet} = Wallets.create_wallet(@valid_attrs)
       changeset = Wallet.changeset(wallet, %{balance: 10.001})
-      assert {:invalid, _message} = Wallets.update(changeset)
+      assert {:bad_request, _message} = Wallets.update(changeset)
     end
 
     test "get_wallet_by_user returns wallet for existing user_id" do

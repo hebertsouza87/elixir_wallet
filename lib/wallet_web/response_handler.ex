@@ -16,9 +16,10 @@ defmodule WalletWeb.ResponseHandler do
 
   def handle_response({:ok, data}, status, conn), do: send_resp(conn, status, data)
 
-  def handle_response({:error, reason}, _status, conn), do: send_resp(conn, 400, reason)
-
+  def handle_response({:error, reason}, _status, conn), do: render_response(conn, :internal_server_error, %{error: reason})
   def handle_response({:not_found, reason}, _status, conn), do: render_response(conn, :not_found, %{error: reason})
+  def handle_response({:bad_request, reason}, _status, conn), do: render_response(conn, :bad_request, %{error: reason})
+
 
   def handle_response({:error, _reason}, _status, conn) do
     conn

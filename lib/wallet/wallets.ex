@@ -13,7 +13,7 @@ defmodule Wallet.Wallets do
     if changeset.valid? do
       Repo.update(changeset, returning: true)
     else
-      {:invalid, "Invalid wallet"}
+      {:bad_request, "Invalid wallet"}
     end
   end
 

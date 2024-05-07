@@ -179,7 +179,7 @@ end
 
   defp validate_same_wallet(from_wallet, to_wallet) do
     if from_wallet.id == to_wallet.id do
-      {:error, {:invalid, "Same wallet transfer not allowed"}}
+      {:bad_request, "Same wallet transfer not allowed"}
     else
       :ok
     end
@@ -192,7 +192,7 @@ end
 
   defp validate_sufficient_funds(new_balance) do
     if Decimal.compare(new_balance, Decimal.new("0.0")) == :lt do
-      {:error, {:invalid, "Insufficient funds"}}
+      {:bad_request, "Insufficient funds"}
     else
       :ok
     end
@@ -208,13 +208,13 @@ end
   defp validate_amount(amount) do
     cond do
       !is_float(amount) ->
-        {:error, {:invalid, "Amount must be a float"}}
+        {:bad_request, "Amount must be a float"}
 
       !correct_decimal_places?(amount) ->
-        {:error, {:invalid, "Amount must have max two decimal places"}}
+        {:bad_request, "Amount must have max two decimal places"}
 
       Decimal.compare(Decimal.new(Float.to_string(amount)), Decimal.new("0.0")) in [:eq, :lt] ->
-        {:error, {:invalid, "Amount must be greater than 0"}}
+        {:bad_request, "Amount must be greater than 0"}
 
       true ->
         :ok
