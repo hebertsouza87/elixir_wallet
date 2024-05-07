@@ -15,7 +15,7 @@ defmodule Wallet.Wallets do
     |> Repo.insert()
   end
 
-  def create_wallet({error, reason}) do {error, reason} end
+  def create_wallet({error, reason}), do: {error, reason}
 
   def update(changeset) do
     if changeset.valid? do
@@ -30,7 +30,7 @@ defmodule Wallet.Wallets do
     |> update()
   end
 
-  def get_wallet_by_user({:ok, user_id}) do get_wallet_by_user(user_id) end
+  def get_wallet_by_user({:ok, user_id}), do: get_wallet_by_user(user_id)
 
   def get_wallet_by_user(user_id) do
     case Repo.get_by(Wallet, user_id: user_id) do
