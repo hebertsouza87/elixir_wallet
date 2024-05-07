@@ -64,17 +64,21 @@ config :logger, :console,
 config :phoenix, :json_library, Jason
 
 # Config Kafka
+
+kafka_host = "KAFKA_HOST" |> System.get_env("localhost") |> String.to_atom()
+kafka_port = "KAFKA_PORT" |> System.get_env("9092") |>  String.to_integer()
+
 config :kaffe,
   consumer: [
-    endpoints: [{String.to_atom(System.get_env("KAFKA_HOST", "localhost")), String.to_integer(System.get_env("KAFKA_PORT", "9092"))}],
-    topics: String.split(System.get_env("KAFKA_CONSUMER_TOPICS", "FinancialTransactions"), ",", trim: true),
+    endpoints: [{kafka_host,kafka_port}],
+    topics: "KAFKA_CONSUMER_TOPICS" |> System.get_env("FinancialTransactions") |> String.split(",", trim: true),
     consumer_group: System.get_env("KAFKA_CONSUMER_GROUP", "wallet_api"),
     message_handler: Wallet.Kafka.Consumer
   ],
   producer: [
-    endpoints: [{String.to_atom(System.get_env("KAFKA_HOST", "localhost")), String.to_integer(System.get_env("KAFKA_PORT", "9092"))}],
+    endpoints: [{kafka_host, kafka_port}],
     default_topic: System.get_env("KAFKA_DEFAULT_TOPIC", "FinancialTransactions"),
-    topics: String.split(System.get_env("KAFKA_PRODUCER_TOPICS", "FinancialTransactions"), ",", trim: true)
+    topics: "KAFKA_PRODUCER_TOPICS" |> System.get_env("FinancialTransactions") |> String.split(",", trim: true),
   ]
 
 # Import environment specific config. This must remain at the bottom

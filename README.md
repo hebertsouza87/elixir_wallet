@@ -44,6 +44,12 @@ Agora você pode visitar [`localhost:4000`](http://localhost:4000) do seu navega
 Agora você pode visitar [`localhost:4000`](http://localhost:4000) do seu navegador.
 
 
+### Kafka
+
+Será necessário criar um topico no kafka, para isso, é possível utiliar o comando 
+`kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic FinancialTransactions --replication-factor 1 --partitions 1` no container do kafka
+
+
 ## Endpoints
 
 - `POST /api/dev/token`: 
