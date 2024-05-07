@@ -2,11 +2,10 @@ import Config
 
 # Configure your database
 config :wallet, Wallet.Repo,
-  username: System.get_env("DATABASE_USER")               || "postgres",
-  password: System.get_env("DATABASE_PASSWORD")           || "postgres",
-  hostname: System.get_env("DATABASE_HOST")               || "localhost",
-  database: System.get_env("DATABASE_NAME")               || "wallet_dev",
-  port: String.to_integer(System.get_env("DATABASE_PORT") || "5432"),
+  username: "DATABASE_USER"     |> System.get_env("postgres"),
+  password: "DATABASE_PASSWORD" |> System.get_env("postgres"),
+  database: "DATABASE_NAME"     |> System.get_env("wallet_dev"),
+  port:     "DATABASE_PORT"     |> System.get_env("5432") |> String.to_integer(),
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10

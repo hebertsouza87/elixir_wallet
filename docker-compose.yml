@@ -1,3 +1,4 @@
+version: '3'
 services:
   web:
     image: wallet_api
@@ -14,7 +15,7 @@ services:
       KAFKA_DEFAULT_TOPIC: FinancialTransactions
       KAFKA_PRODUCER_TOPICS: FinancialTransactions
       KAFKA_SYNC_TIMEOUT: 2000
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_HOST://your_local_ip:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_HOST://127.0.0.1:29092
     build:
       context: .
       dockerfile: Dockerfile
@@ -66,5 +67,8 @@ services:
       - "29092:29092"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - kafka_data:/var/lib/kafka/data
+
 volumes:
   postgres_data:
+  kafka_data:
