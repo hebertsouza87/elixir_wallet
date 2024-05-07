@@ -11,19 +11,19 @@ defmodule WalletWeb.WalletControllerTest do
     {:ok, token, _} = Authentication.Helper.create_token(user_id)
     conn = conn
            |> put_req_header("authorization", "Bearer #{token}")
-           |> post("/api/wallets", %{})
+           |> post("/api/wallets")
 
-    assert json_response(conn, 200)["id"] != nil
-    assert json_response(conn, 200)["number"] != nil
-    assert json_response(conn, 200)["balance"] != "0.0"
+    assert json_response(conn, 201)["id"] != nil
+    assert json_response(conn, 201)["number"] != nil
+    assert json_response(conn, 201)["balance"] != "0.0"
   end
 
   test "returns error with invalid JWT token", %{conn: conn} do
     invalid_token = "token-inválido"
     conn = conn
-    |> put_req_header("authorization", "Bearer #{invalid_token}")
-    |> post("/api/wallets")
+           |> put_req_header("authorization", "Bearer #{invalid_token}")
+           |> post("/api/wallets")
 
-    assert json_response(conn, 500)
+    assert json_response(conn, 401)["error"] != nil
   end
 end

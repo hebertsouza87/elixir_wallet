@@ -1,11 +1,13 @@
 defmodule Wallet.TransactionsTest do
+  import Wallet.Factory
+
   use Wallet.DataCase
   alias Wallet.Transactions
   alias Wallet.Wallets
 
   setup do
-    {:ok, wallet1} = Wallets.create_wallet(%{user_id: Ecto.UUID.generate(), balance: Decimal.new("100.0")})
-    {:ok, wallet2} = Wallets.create_wallet(%{user_id: Ecto.UUID.generate(), balance: Decimal.new("50.0")})
+    wallet1 = insert(:wallet)
+    wallet2 = insert(:wallet)
 
     {:ok, %{wallet1: wallet1, wallet2: wallet2}}
   end
@@ -16,11 +18,11 @@ defmodule Wallet.TransactionsTest do
     end
 
     test "returns error for negative amount", context do
-      assert {:error, _} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, -50.0)
+      assert {:bad_request, _} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, -50.0)
     end
 
     test "returns error for invalid amount type", context do
-      assert {:error, _} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, "invalid")
+      assert {:bad_request, _} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, "invalid")
     end
   end
 
@@ -30,15 +32,15 @@ defmodule Wallet.TransactionsTest do
     end
 
     test "returns error for negative amount", context do
-      assert {:error, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, -50.0)
+      assert {:bad_request, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, -50.0)
     end
 
     test "returns error for invalid amount type", context do
-      assert {:error, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, "invalid")
+      assert {:bad_request, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, "invalid")
     end
 
     test "returns error for insufficient funds", context do
-      assert {:error, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, 150.0)
+      assert {:bad_request, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, 150.0)
     end
   end
 
@@ -62,13 +64,13 @@ defmodule Wallet.TransactionsTest do
         "wallet_origin_id" => context[:wallet1].id
       }
 
-      assert {:error, _} = Transactions.register_transaction(transaction_json)
+      assert {:bad_request, _} = Transactions.register_transaction(transaction_json)
     end
   end
 
   describe "transfer_to_wallet_by_user/3" do
     test "returns error for failed transaction", context do
-      assert {:error, _} = Transactions.transfer_to_wallet_by_user(context[:wallet1].user_id, context[:wallet2].number, 200.0)
+      assert {:bad_request, _} = Transactions.transfer_to_wallet_by_user(context[:wallet1].user_id, context[:wallet2].number, 200.0)
     end
   end
 end

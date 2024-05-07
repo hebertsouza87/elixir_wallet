@@ -48,5 +48,4 @@ defmodule WalletWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug WalletWeb.Router
-  plug WalletWeb.ErrorHandler
 end

@@ -16,25 +16,29 @@ defmodule Wallet.Transactions do
   def add_to_wallet_by_user(user_id, amount) do
     :telemetry.execute([:deposit, :started], %{amount: amount})
     Logger.info("Adding #{amount} to wallet of user #{user_id}")
-    with :ok <- validate_amount(amount),
-        {:ok, wallet} <- Wallets.get_wallet_by_user(user_id),
-        transaction = build_transaction(wallet, amount),
-        {:ok, _} <- Wallet.Kafka.Producer.send_deposit(transaction) do
-      Logger.info("Deposit sent to Kafka, transaction: #{inspect(transaction)}")
-      :telemetry.execute([:deposit, :created], %{amount: amount})
-      {:ok, transaction}
-    else
-      error ->
-        :telemetry.execute([:withdraw, :error], %{amount: amount})
-        error
+
+    with :ok <- validate_amount(amount) do
+          user_id
+          |> Wallets.get_wallet_by_user()
+          |> build_transaction(amount)
+          |> Wallet.Kafka.Producer.send_deposit()
+          |> monitoring()
     end
   end
+
+  defp monitoring({:ok, %Transaction{} = transaction}) do
+    Logger.info("Deposit sent to Kafka")
+    :telemetry.execute([:deposit, :completed], %{amount: transaction.amount})
+    {:ok, transaction}
+  end
+  defp monitoring({:not_found, message}) do {:not_found, message} end
 
   @doc """
   Registra uma transação.
   """
   def register_transaction(transaction_json) do
     Logger.info("Registering transaction: #{inspect(transaction_json)}")
+
     with :ok <- validate_amount(transaction_json["amount"]),
     {:ok, wallet} <- Wallets.get_and_lock_wallet_by_number(transaction_json["wallet_origin_number"]),
     new_balance <- calculate_new_balance(wallet, transaction_json["amount"], transaction_json["operation"]),
@@ -80,12 +84,12 @@ end
     :telemetry.execute([:transfer, :started], %{amount: amount})
     Logger.info("Transferring from wallet of user #{user_id} to wallet #{to_wallet_number}")
     with :ok <- validate_amount(amount),
-         {:ok, from_wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
-         {:ok, to_wallet} <- Wallets.get_and_lock_wallet_by_number(to_wallet_number),
-         :ok <- validate_same_wallet(from_wallet, to_wallet),
-         new_balance_from <- calculate_new_balance(from_wallet, amount, :withdraw),
-         :ok <- validate_sufficient_funds(new_balance_from),
-         new_balance_to <- calculate_new_balance(to_wallet, amount, :deposit) do
+        {:ok, from_wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
+        {:ok, to_wallet} <- Wallets.get_and_lock_wallet_by_number(to_wallet_number),
+        :ok <- validate_same_wallet(from_wallet, to_wallet),
+        new_balance_from <- calculate_new_balance(from_wallet, amount, :withdraw),
+        :ok <- validate_sufficient_funds(new_balance_from),
+        new_balance_to <- calculate_new_balance(to_wallet, amount, :deposit) do
 
       multi = Multi.new()
       |> Multi.run(:update_from_wallet, fn _repo, _changes ->
@@ -94,26 +98,10 @@ end
       |> Multi.run(:update_to_wallet, fn _repo, _changes ->
         Wallets.update_wallet_balance(to_wallet, new_balance_to)
       end)
-      |> create_transaction_multi(%{
-        wallet_id: from_wallet.id,
-        amount: amount,
-        operation: :transfer,
-        wallet_destination_number: to_wallet.number,
-        wallet_destination_id: to_wallet.id,
-        wallet_origin_number: from_wallet.number,
-        wallet_origin_id: from_wallet.id,
-      }, :create_transaction_from)
-      |> create_transaction_multi(%{
-        wallet_id: to_wallet.id,
-        amount: amount,
-        operation: :transfer,
-        wallet_destination_number: to_wallet.number,
-        wallet_destination_id: to_wallet.id,
-        wallet_origin_number: from_wallet.number,
-        wallet_origin_id: from_wallet.id,
-      }, :create_transaction_to)
+      |> create_transactions_multi(amount, from_wallet, to_wallet)
+      |> Repo.transaction()
 
-      case Repo.transaction(multi) do
+      case multi do
         {:ok, %{create_transaction_from: created_transaction}} ->
           Logger.info("Transaction registered")
           :telemetry.execute([:transfer, :created], %{amount: amount})
@@ -132,7 +120,29 @@ end
     Multi.insert(multi, operation_name, Transaction.changeset(%Transaction{}, attrs))
   end
 
-  defp build_transaction(wallet, amount) do
+  defp create_transactions_multi(multi, amount, from_wallet, to_wallet) do
+    multi
+    |> Multi.insert(:create_transaction_from, Transaction.changeset(%Transaction{}, %{
+      wallet_id: from_wallet.id,
+      amount: amount,
+      operation: :transfer,
+      wallet_destination_number: to_wallet.number,
+      wallet_destination_id: to_wallet.id,
+      wallet_origin_number: from_wallet.number,
+      wallet_origin_id: from_wallet.id,
+    }))
+    |> Multi.insert(:create_transaction_to, Transaction.changeset(%Transaction{}, %{
+      wallet_id: to_wallet.id,
+      amount: amount,
+      operation: :transfer,
+      wallet_destination_number: to_wallet.number,
+      wallet_destination_id: to_wallet.id,
+      wallet_origin_number: from_wallet.number,
+      wallet_origin_id: from_wallet.id,
+    }))
+  end
+
+  defp build_transaction({:ok, wallet}, amount) do
     %Transaction{
       id: Ecto.UUID.generate(),
       amount: amount,
@@ -141,6 +151,7 @@ end
       wallet_origin_number: wallet.number
     }
   end
+  defp build_transaction({error, reason}, _amount), do: {error, reason}
 
   defp change_balance(user_id, amount, operation) do
     Logger.info("Changing balance of user #{user_id} by #{operation}")
@@ -175,7 +186,7 @@ end
 
   defp validate_same_wallet(from_wallet, to_wallet) do
     if from_wallet.id == to_wallet.id do
-      {:error, {:invalid, "Same wallet transfer not allowed"}}
+      {:bad_request, "Same wallet transfer not allowed"}
     else
       :ok
     end
@@ -188,7 +199,7 @@ end
 
   defp validate_sufficient_funds(new_balance) do
     if Decimal.compare(new_balance, Decimal.new("0.0")) == :lt do
-      {:error, {:invalid, "Insufficient funds"}}
+      {:bad_request, "Insufficient funds"}
     else
       :ok
     end
@@ -204,13 +215,13 @@ end
   defp validate_amount(amount) do
     cond do
       !is_float(amount) ->
-        {:error, {:invalid, "Amount must be a float"}}
+        {:bad_request, "Amount must be a float"}
 
       !correct_decimal_places?(amount) ->
-        {:error, {:invalid, "Amount must have max two decimal places"}}
+        {:bad_request, "Amount must have max two decimal places"}
 
       Decimal.compare(Decimal.new(Float.to_string(amount)), Decimal.new("0.0")) in [:eq, :lt] ->
-        {:error, {:invalid, "Amount must be greater than 0"}}
+        {:bad_request, "Amount must be greater than 0"}
 
       true ->
         :ok

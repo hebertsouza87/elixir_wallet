@@ -12,21 +12,21 @@ defmodule WalletWeb.TransactionControllerTest do
     {:ok, conn: build_conn(), token: token, wallet1: wallet1, wallet2: wallet2}
   end
 
-  test "returns 200 on successful deposit", %{conn: conn, token: token} do
+  test "returns 201 on successful deposit", %{conn: conn, token: token} do
     conn = conn
     |> put_req_header("authorization", "Bearer #{token}")
     |> post("/api/deposit", %{"amount" => 100.0})
 
-    assert json_response(conn, 200)["id"] != nil
+    assert json_response(conn, 201)["id"] != nil
 
   end
 
-  test "returns 200 on successful withdraw", %{conn: conn, token: token} do
+  test "returns 201 on successful withdraw", %{conn: conn, token: token} do
     conn = conn
     |> put_req_header("authorization", "Bearer #{token}")
     |> post("/api/withdraw", %{"amount" => 100.0})
 
-    assert json_response(conn, 200)["id"] != nil
+    assert json_response(conn, 201)["id"] != nil
   end
 
   test "returns 400 on insuficient funds", %{conn: conn, token: token} do
@@ -56,12 +56,12 @@ defmodule WalletWeb.TransactionControllerTest do
     assert json_response(conn, 400)
   end
 
-  test "returns 200 on successful transfer", %{conn: conn, token: token, wallet2: wallet2} do
+  test "returns 201 on successful transfer", %{conn: conn, token: token, wallet2: wallet2} do
     conn = conn
     |> put_req_header("authorization", "Bearer #{token}")
     |> post("/api/transfer", %{"amount" => 100.0, "to_wallet_number" => wallet2.number})
 
-    assert json_response(conn, 200)["id"] != nil
+    assert json_response(conn, 201)["id"] != nil
   end
 
   test "returns 404 on not found wallet number", %{conn: conn, token: token} do

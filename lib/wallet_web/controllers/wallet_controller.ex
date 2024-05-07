@@ -6,11 +6,9 @@ defmodule WalletWeb.WalletController do
   alias WalletWeb.ResponseHandler
 
   def create(conn, _params) do
-    result = case Helper.get_user_id_from_conn(conn) do
-      {:ok, user_id} -> Wallets.create_wallet(%{user_id: user_id})
-      error -> error
-    end
-
-    ResponseHandler.handle_response(result, conn)
+    conn
+    |> Helper.get_user_id_from_conn()
+    |> Wallets.create_wallet()
+    |> ResponseHandler.handle_response(:created, conn)
   end
 end
