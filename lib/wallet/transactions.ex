@@ -23,10 +23,6 @@ defmodule Wallet.Transactions do
           |> build_transaction(amount)
           |> Wallet.Kafka.Producer.send_deposit()
           |> monitoring()
-    else
-      error ->
-        :telemetry.execute([:withdraw, :error], %{amount: amount})
-        error
     end
   end
 
@@ -41,6 +37,7 @@ defmodule Wallet.Transactions do
   """
   def register_transaction(transaction_json) do
     Logger.info("Registering transaction: #{inspect(transaction_json)}")
+
     with :ok <- validate_amount(transaction_json["amount"]),
     {:ok, wallet} <- Wallets.get_and_lock_wallet_by_number(transaction_json["wallet_origin_number"]),
     new_balance <- calculate_new_balance(wallet, transaction_json["amount"], transaction_json["operation"]),
