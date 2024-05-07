@@ -83,12 +83,12 @@ end
     :telemetry.execute([:transfer, :started], %{amount: amount})
     Logger.info("Transferring from wallet of user #{user_id} to wallet #{to_wallet_number}")
     with :ok <- validate_amount(amount),
-         {:ok, from_wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
-         {:ok, to_wallet} <- Wallets.get_and_lock_wallet_by_number(to_wallet_number),
-         :ok <- validate_same_wallet(from_wallet, to_wallet),
-         new_balance_from <- calculate_new_balance(from_wallet, amount, :withdraw),
-         :ok <- validate_sufficient_funds(new_balance_from),
-         new_balance_to <- calculate_new_balance(to_wallet, amount, :deposit) do
+        {:ok, from_wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
+        {:ok, to_wallet} <- Wallets.get_and_lock_wallet_by_number(to_wallet_number),
+        :ok <- validate_same_wallet(from_wallet, to_wallet),
+        new_balance_from <- calculate_new_balance(from_wallet, amount, :withdraw),
+        :ok <- validate_sufficient_funds(new_balance_from),
+        new_balance_to <- calculate_new_balance(to_wallet, amount, :deposit) do
 
       multi = Multi.new()
       |> Multi.run(:update_from_wallet, fn _repo, _changes ->
@@ -97,26 +97,10 @@ end
       |> Multi.run(:update_to_wallet, fn _repo, _changes ->
         Wallets.update_wallet_balance(to_wallet, new_balance_to)
       end)
-      |> create_transaction_multi(%{
-        wallet_id: from_wallet.id,
-        amount: amount,
-        operation: :transfer,
-        wallet_destination_number: to_wallet.number,
-        wallet_destination_id: to_wallet.id,
-        wallet_origin_number: from_wallet.number,
-        wallet_origin_id: from_wallet.id,
-      }, :create_transaction_from)
-      |> create_transaction_multi(%{
-        wallet_id: to_wallet.id,
-        amount: amount,
-        operation: :transfer,
-        wallet_destination_number: to_wallet.number,
-        wallet_destination_id: to_wallet.id,
-        wallet_origin_number: from_wallet.number,
-        wallet_origin_id: from_wallet.id,
-      }, :create_transaction_to)
+      |> create_transactions_multi(amount, from_wallet, to_wallet)
+      |> Repo.transaction()
 
-      case Repo.transaction(multi) do
+      case multi do
         {:ok, %{create_transaction_from: created_transaction}} ->
           Logger.info("Transaction registered")
           :telemetry.execute([:transfer, :created], %{amount: amount})
@@ -133,6 +117,28 @@ end
 
   defp create_transaction_multi(multi, attrs, operation_name) do
     Multi.insert(multi, operation_name, Transaction.changeset(%Transaction{}, attrs))
+  end
+
+  defp create_transactions_multi(multi, amount, from_wallet, to_wallet) do
+    multi
+    |> Multi.insert(:create_transaction_from, Transaction.changeset(%Transaction{}, %{
+      wallet_id: from_wallet.id,
+      amount: amount,
+      operation: :transfer,
+      wallet_destination_number: to_wallet.number,
+      wallet_destination_id: to_wallet.id,
+      wallet_origin_number: from_wallet.number,
+      wallet_origin_id: from_wallet.id,
+    }))
+    |> Multi.insert(:create_transaction_to, Transaction.changeset(%Transaction{}, %{
+      wallet_id: to_wallet.id,
+      amount: amount,
+      operation: :transfer,
+      wallet_destination_number: to_wallet.number,
+      wallet_destination_id: to_wallet.id,
+      wallet_origin_number: from_wallet.number,
+      wallet_origin_id: from_wallet.id,
+    }))
   end
 
   defp build_transaction({:ok, wallet}, amount) do

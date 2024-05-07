@@ -3,9 +3,9 @@ defmodule Wallet.Wallets do
   alias Wallet.Repo
   alias Wallet.Wallet
 
-  def create_wallet(attrs \\ %{}) do
+  def create_wallet({:ok, user_id}) do
     %Wallet{}
-    |> Wallet.changeset(attrs)
+    |> Wallet.changeset(%{user_id: user_id})
     |> Repo.insert(returning: true)
   end
 
