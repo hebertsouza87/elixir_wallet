@@ -20,16 +20,19 @@ defmodule WalletWeb.ResponseHandler do
     render_response(conn, :bad_request, %{error: Atom.to_string(field) <> " " <> message})
   end
 
-  def handle_response({:unauthorized, reason}, _status, conn) do
-    render_response(conn, :unauthorized, %{error: reason})
-  end
+  def handle_response({:unauthorized, reason}, _status, conn), do: render_response(conn, :unauthorized, %{error: reason})
   def handle_response({:error, reason}, _status, conn), do: render_response(conn, :internal_server_error, %{error: reason})
   def handle_response({:not_found, reason}, _status, conn), do: render_response(conn, :not_found, %{error: reason})
   def handle_response({:bad_request, reason}, _status, conn), do: render_response(conn, :bad_request, %{error: reason})
+  def handle_response({:insufficient_funds, reason}, _status, conn), do: render_response(conn, :bad_request, %{error: reason})
+  def handle_response({:invalid_amount, reason}, _status, conn), do: render_response(conn, :bad_request, %{error: reason})
 
   def handle_response(%Transaction{} = transaction, status, conn) do
     render_response(conn, status, TransactionJSON.render(transaction))
   end
+
+  def handle_response({:bad_request, reason}, conn), do: render_response(conn, :bad_request, %{error: reason})
+  def handle_response({:not_found, reason}, conn), do: render_response(conn, :not_found, %{error: reason})
 
   def handle_response({_status, %Transaction{} = transaction}, http_status, conn) do
     render_response(conn, http_status, TransactionJSON.render(transaction))
