@@ -46,6 +46,8 @@ defmodule Wallet.Wallets do
     end
   end
 
+  def get_and_lock_wallet_by_user(nil), do: {:bad_request, "Invalid user_id"}
+
   def get_and_lock_wallet_by_user(user_id) do
     query = from w in Wallet, where: w.user_id == ^user_id, lock: "FOR UPDATE"
     case Repo.one(query) do
@@ -53,6 +55,8 @@ defmodule Wallet.Wallets do
       wallet -> {:ok, wallet}
     end
   end
+
+  def get_and_lock_wallet_by_number(nil), do: {:bad_request, "Invalid wallet number"}
 
   def get_and_lock_wallet_by_number(wallet_number) do
     query = from w in Wallet, where: w.number == ^wallet_number, lock: "FOR UPDATE"
