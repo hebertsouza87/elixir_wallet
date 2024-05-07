@@ -11,15 +11,11 @@ defmodule WalletWeb.ErrorHandler do
     try do
       conn
     rescue
-      e in Ecto.NoResultsError ->
-        IO.inspect("Errrrrrrrrrrrrrrrrrrroooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")
-        IO.inspect(e)
-
-
-        response(conn, 404, "Not found}")
+      e in NotFoundError ->
+        response(conn, 404, e.message)
       e in _ ->
         Logger.error("Internal server error: #{inspect(e)}")
-        response(conn, 500, "Internal server error")
+        response(conn, 500, e.message)
     end
   end
 
@@ -29,6 +25,4 @@ defmodule WalletWeb.ErrorHandler do
     |> put_resp_header("content-type", "application/json")
     |> send_resp(status, Jason.encode!(%{"status" => status, "error" => message}))
   end
-
-
 end

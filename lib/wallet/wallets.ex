@@ -22,16 +22,11 @@ defmodule Wallet.Wallets do
     |> update()
   end
 
+  def get_wallet_by_user({:ok, user_id}) do get_wallet_by_user(user_id) end
+
   def get_wallet_by_user(user_id) do
     case Repo.get_by(Wallet, user_id: user_id) do
       nil -> {:not_found, "Wallet not found"}
-      wallet -> {:ok, wallet}
-    end
-  end
-
-  def get_wallet_by_user!(user_id) do
-    case Repo.get_by(Wallet, user_id: user_id) do
-      nil -> raise "Wallet not found"
       wallet -> {:ok, wallet}
     end
   end

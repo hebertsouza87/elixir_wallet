@@ -13,14 +13,14 @@ defmodule Wallet.Transactions do
   @doc """
   Adiciona uma quantidade à carteira de um usuário.
   """
-  def add_to_wallet_by_user!(user_id, amount) do
+  def add_to_wallet_by_user(user_id, amount) do
     :telemetry.execute([:deposit, :started], %{amount: amount})
 
     Logger.info("Adding #{amount} to wallet of user #{user_id}")
     with :ok <- validate_amount(amount),
         transaction =
           user_id
-          |> Wallets.get_wallet_by_user!()
+          |> Wallets.get_wallet_by_user()
           |> build_transaction(amount),
         {:ok, _} <- Wallet.Kafka.Producer.send_deposit(transaction) do
       Logger.info("Deposit sent to Kafka, transaction: #{inspect(transaction)}")
@@ -29,7 +29,7 @@ defmodule Wallet.Transactions do
     else
       error ->
         :telemetry.execute([:withdraw, :error], %{amount: amount})
-        raise error
+        error
     end
   end
 
@@ -136,10 +136,6 @@ end
   end
 
   defp build_transaction({:ok, wallet}, amount) do
-    build_transaction(wallet, amount)
-  end
-
-  defp build_transaction(wallet, amount) do
     %Transaction{
       id: Ecto.UUID.generate(),
       amount: amount,
@@ -148,6 +144,7 @@ end
       wallet_origin_number: wallet.number
     }
   end
+  defp build_transaction({error, reason}, _amount), do: {error, reason}
 
   defp change_balance(user_id, amount, operation) do
     Logger.info("Changing balance of user #{user_id} by #{operation}")

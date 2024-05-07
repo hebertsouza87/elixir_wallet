@@ -15,4 +15,5 @@ defmodule Wallet.Kafka.Producer do
         {:error, reason}
     end
   end
+  def send_deposit({error, reason}), do: {error, reason}
 end
