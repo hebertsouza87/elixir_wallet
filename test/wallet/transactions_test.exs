@@ -3,7 +3,6 @@ defmodule Wallet.TransactionsTest do
 
   use Wallet.DataCase
   alias Wallet.Transactions
-  alias Wallet.Wallets
 
   setup do
     wallet1 = insert(:wallet)
