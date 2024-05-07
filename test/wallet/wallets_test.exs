@@ -13,9 +13,24 @@ defmodule Wallet.WalletsTest do
       assert wallet.number != nil
     end
 
+    test "create_wallet/1 with attributes creates a wallet" do
+      attrs = %{user_id: @valid_user_id, balance: 10.0}
+      assert {:ok, %Wallet{} = wallet} = Wallets.create_wallet(attrs)
+      assert wallet.user_id == attrs.user_id
+      assert wallet.balance == Decimal.new(Float.to_string(attrs.balance))
+    end
+
     test "create_wallet/1 fails when wallet already exists for user_id" do
       Wallets.create_wallet({:ok, @valid_user_id})
       assert {:error, _message} = Wallets.create_wallet({:ok, @valid_user_id})
+    end
+
+    test "get_and_lock_wallet_by_user/1 returns error when user_id is nil" do
+      assert {:bad_request, "Invalid user_id"} == Wallets.get_and_lock_wallet_by_user(nil)
+    end
+
+    test "get_and_lock_wallet_by_number/1 returns error when wallet number is nil" do
+      assert {:bad_request, "Invalid wallet number"} == Wallets.get_and_lock_wallet_by_number(nil)
     end
 
     test "update/1 with valid changeset updates the wallet" do
