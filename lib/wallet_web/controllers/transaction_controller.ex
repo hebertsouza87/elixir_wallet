@@ -6,12 +6,11 @@ defmodule WalletWeb.TransactionController do
   alias WalletWeb.ResponseHandler
 
   def deposit(conn, %{"amount" => amount}) do
-    result = case Helper.get_user_id_from_conn(conn) do
-      {:ok, user_id} -> Transactions.add_to_wallet_by_user(user_id, amount)
-      error -> error
-    end
-
-    ResponseHandler.handle_response(result, conn)
+    conn
+    |> Helper.get_user_id_from_conn!()
+    |> Transactions.add_to_wallet_by_user!(amount)
+    |> ResponseHandler.handle_response(:created, conn)
+    :ok
   end
 
   def withdraw(conn, %{"amount" => amount}) do

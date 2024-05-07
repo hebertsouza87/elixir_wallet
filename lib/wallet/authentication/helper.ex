@@ -29,6 +29,14 @@ defmodule Authentication.Helper do
     end
   end
 
+  def get_user_id_from_conn!(conn) do
+    with {:ok, user_id} <- get_user_id_from_conn(conn) do
+      user_id
+    else
+      _ -> raise "Failed to get user_id from conn"
+    end
+  end
+
   @doc """
   Cria um token JWT para o user_id fornecido.
   Em uma aplicação real, essa funcão não deveria existir aqui, a criacão do token deve ser responsabilidade

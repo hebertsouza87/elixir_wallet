@@ -17,6 +17,16 @@ defmodule Wallet.Wallet do
     |> validate_required([:user_id])
     |> unique_constraint(:user_id)
     |> validate_decimal(:balance)
+    |> validate_uuid(:user_id)
+  end
+
+  defp validate_uuid(changeset, field) do
+    validate_change(changeset, field, fn _, value ->
+      case Ecto.UUID.cast(value) do
+        {:ok, _} -> []
+        :error -> [{field, "must be a valid UUID"}]
+      end
+    end)
   end
 
   defp validate_decimal(changeset, field) do

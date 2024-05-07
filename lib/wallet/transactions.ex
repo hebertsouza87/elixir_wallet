@@ -13,20 +13,23 @@ defmodule Wallet.Transactions do
   @doc """
   Adiciona uma quantidade à carteira de um usuário.
   """
-  def add_to_wallet_by_user(user_id, amount) do
+  def add_to_wallet_by_user!(user_id, amount) do
     :telemetry.execute([:deposit, :started], %{amount: amount})
+
     Logger.info("Adding #{amount} to wallet of user #{user_id}")
     with :ok <- validate_amount(amount),
-        {:ok, wallet} <- Wallets.get_wallet_by_user(user_id),
-        transaction = build_transaction(wallet, amount),
+        transaction =
+          user_id
+          |> Wallets.get_wallet_by_user!()
+          |> build_transaction(amount),
         {:ok, _} <- Wallet.Kafka.Producer.send_deposit(transaction) do
       Logger.info("Deposit sent to Kafka, transaction: #{inspect(transaction)}")
       :telemetry.execute([:deposit, :created], %{amount: amount})
-      {:ok, transaction}
+      transaction
     else
       error ->
         :telemetry.execute([:withdraw, :error], %{amount: amount})
-        error
+        raise error
     end
   end
 
@@ -130,6 +133,10 @@ end
 
   defp create_transaction_multi(multi, attrs, operation_name) do
     Multi.insert(multi, operation_name, Transaction.changeset(%Transaction{}, attrs))
+  end
+
+  defp build_transaction({:ok, wallet}, amount) do
+    build_transaction(wallet, amount)
   end
 
   defp build_transaction(wallet, amount) do

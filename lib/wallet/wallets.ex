@@ -4,30 +4,9 @@ defmodule Wallet.Wallets do
   alias Wallet.Wallet
 
   def create_wallet(attrs \\ %{}) do
-    case valid_uuid?(attrs["user_id"] || attrs[:user_id]) do
-      true ->
-        changeset = Wallet.changeset(%Wallet{}, attrs)
-
-        if changeset.valid? do
-          case Repo.get_by(Wallet, user_id: attrs["user_id"] || attrs[:user_id]) do
-            nil ->
-              Repo.insert(changeset, returning: true)
-            _wallet ->
-              {:invalid, "Wallet already exists for this user_id"}
-          end
-        else
-          {:error, changeset}
-        end
-      false ->
-        {:invalid, "Invalid user_id format. Must be a valid UUID."}
-    end
-  end
-
-  defp valid_uuid?(value) do
-    case Ecto.UUID.cast(value) do
-      {:ok, _uuid} -> true
-      :error -> false
-    end
+    %Wallet{}
+    |> Wallet.changeset(attrs)
+    |> Repo.insert(returning: true)
   end
 
   def update(changeset) do
@@ -45,14 +24,21 @@ defmodule Wallet.Wallets do
 
   def get_wallet_by_user(user_id) do
     case Repo.get_by(Wallet, user_id: user_id) do
-      nil -> {:not_found, {:not_found, "Wallet not found"}}
+      nil -> {:not_found, "Wallet not found"}
+      wallet -> {:ok, wallet}
+    end
+  end
+
+  def get_wallet_by_user!(user_id) do
+    case Repo.get_by(Wallet, user_id: user_id) do
+      nil -> raise "Wallet not found"
       wallet -> {:ok, wallet}
     end
   end
 
   def get_wallet_by_number(wallet_number) do
     case Repo.get_by(Wallet, number: wallet_number) do
-      nil -> {:not_found, {:not_found, "Wallet not found"}}
+      nil -> {:not_found, "Wallet not found"}
       wallet -> {:ok, wallet}
     end
   end

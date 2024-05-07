@@ -13,6 +13,10 @@ defmodule WalletWeb.ResponseHandler do
     |> json(data)
   end
 
+  def handle_response(%Transaction{} = transaction, status, conn) do
+    render_response(conn, get_http_status(status), TransactionJSON.render(transaction))
+  end
+
   def handle_response({status, %Wallet{} = wallet}, conn) do
     render_response(conn, get_http_status(status), WalletJSON.render(wallet))
   end
