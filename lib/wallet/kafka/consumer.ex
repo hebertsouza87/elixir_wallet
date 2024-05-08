@@ -24,16 +24,27 @@ defmodule Wallet.Kafka.Consumer do
   end
 
   def handle_message("deposit", value) do
-    Logger.info("Processing deposit: " <> value)
-    json = value
-    |> Jason.decode!()
-    transaction = Transactions.register_transaction(json)
-    :telemetry.execute([:kafka, :deposit, :consumer], %{id: json["id"]})
-    transaction
+    value
+    |> log_deposit
+    |> Jason.decode!
+    |> Transactions.register_transaction
+    |> execute_telemetry
   end
 
   def handle_message(key, message) do
     Logger.error("Message not expected: " <> key <> " - " <> message)
     :error
   end
+
+  defp log_deposit(value) do
+    Logger.info("Processing deposit: " <> value)
+    value
+  end
+
+  defp execute_telemetry({:ok, transaction}) do
+    :telemetry.execute([:kafka, :deposit, :consumer], %{id: transaction.id})
+    {:ok, transaction}
+  end
+
+  defp execute_telemetry({_error, _reason} = error), do: error
 end
