@@ -19,22 +19,13 @@ defmodule Authentication.Helper do
 
   """
   def get_user_id_from_conn(conn) do
-    with [auth_header | _] <- Plug.Conn.get_req_header(conn, "authorization"),
-         [_, jwt | _] <- String.split(auth_header),
-         {:ok, claims} <- Joken.verify(jwt, create_signer(), []),
-         user_id when is_binary(user_id) <- claims |> Map.get("user_id") do
-      {:ok, user_id}
-    else
-      _ -> {:unauthorized, "Failed to get user_id from conn"}
-    end
-  end
-
-  def get_user_id_from_conn!(conn) do
-    with {:ok, user_id} <- get_user_id_from_conn(conn) do
-      user_id
-    else
-      _ -> raise "Failed to get user_id from conn"
-    end
+    conn
+    |> Plug.Conn.get_req_header("authorization")
+    |> List.first()
+    |> String.split()
+    |> get_jwt()
+    |> Joken.verify(create_signer(), [])
+    |> get_user_id_from_claims()
   end
 
   @doc """
@@ -49,13 +40,25 @@ defmodule Authentication.Helper do
 
   """
   def create_token(user_id) do
-    claims = %{"user_id" => user_id}
-    Joken.encode_and_sign(claims, create_signer())
+    %{"user_id" => user_id}
+    |> Joken.encode_and_sign(create_signer())
   end
 
   @doc false
   defp create_signer do
-    secret_key = ConfigAgent.get_jwt_secret_key()
-    Signer.create(@algorithm, secret_key)
+    Signer.create(@algorithm, ConfigAgent.get_jwt_secret_key())
   end
+
+  defp get_jwt([_, jwt | _]), do: jwt
+  defp get_jwt(_), do: {:unauthorized, "Failed to get jwt from auth_header"}
+
+  defp get_user_id_from_claims({:ok, claims}) do
+    claims
+    |> Map.get("user_id")
+    |> check_user_id()
+  end
+  defp get_user_id_from_claims(_), do: {:unauthorized, "Failed to get user_id from conn"}
+
+  defp check_user_id(user_id) when is_binary(user_id), do: {:ok, user_id}
+  defp check_user_id(_), do: {:unauthorized, "Failed to get user_id from conn"}
 end

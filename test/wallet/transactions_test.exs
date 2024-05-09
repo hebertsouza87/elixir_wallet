@@ -1,75 +1,60 @@
-defmodule Wallet.TransactionsTest do
+defmodule Wallet.TransactionTest do
   import Wallet.Factory
 
-  use Wallet.DataCase
+  use Wallet.DataCase, async: true
+
+  alias Wallet.Transaction
   alias Wallet.Transactions
+  alias Wallet.Repo
+  alias Wallet.Wallets
+  alias Wallet.Wallet
 
   setup do
-    wallet1 = insert(:wallet)
-    wallet2 = insert(:wallet)
-
-    {:ok, %{wallet1: wallet1, wallet2: wallet2}}
+    wallet = insert(:wallet)
+    {:ok, wallet: wallet, user_id: wallet.user_id}
   end
 
-  describe "add_to_wallet_by_user/2" do
-    test "adds amount to wallet balance", context do
-      assert {:ok, _transaction} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, 50.0)
-    end
+  describe "process_transfer/3" do
+    test "validates and processes a transfer from one wallet to another", %{user_id: user_id} do
+      wallet_to = insert(:wallet)
+      to_wallet_number = wallet_to.number
+      amount = 10.0
 
-    test "returns error for negative amount", context do
-      assert {:bad_request, _} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, -50.0)
-    end
+      result = Transactions.process_transfer({:ok, user_id}, to_wallet_number, amount)
 
-    test "returns error for invalid amount type", context do
-      assert {:bad_request, _} = Transactions.add_to_wallet_by_user(context[:wallet1].user_id, "invalid")
-    end
-  end
+      assert {:ok, _} = result
 
-  describe "withdraw_to_wallet_by_user/2" do
-    test "withdraws amount from wallet balance", context do
-      assert {:ok, _transaction} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, 50.0)
-    end
+      {:ok, updated_wallet_from} = Wallets.get_wallet_by_user(user_id)
+      {:ok, updated_wallet_to} = Wallets.get_wallet_by_number(to_wallet_number)
 
-    test "returns error for negative amount", context do
-      assert {:bad_request, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, -50.0)
-    end
-
-    test "returns error for invalid amount type", context do
-      assert {:bad_request, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, "invalid")
-    end
-
-    test "returns error for insufficient funds", context do
-      assert {:bad_request, _} = Transactions.withdraw_to_wallet_by_user(context[:wallet1].user_id, 150.0)
+      assert updated_wallet_from.balance == Decimal.new("90.0")
+      assert updated_wallet_to.balance == Decimal.new("110.0")
     end
   end
 
-  describe "register_transaction/1" do
-    test "registers a transaction", context do
-      transaction_json = %{
-        "amount" => 50.0,
-        "operation" => "deposit",
-        "wallet_origin_number" => context[:wallet1].number,
-        "wallet_origin_id" => context[:wallet1].id
-      }
+  describe "process_transaction/3" do
+    test "validates and processes a deposit transaction", %{user_id: user_id} do
+      amount = 10.0
+      operation = :deposit
 
-      assert {:ok, _transaction} = Transactions.register_transaction(transaction_json)
+      result = Transactions.process_transaction({:ok, user_id}, amount, operation)
+
+      assert {:ok, _} = result
+
+      {:ok, updated_wallet} = Wallets.get_wallet_by_user(user_id)
+      assert updated_wallet.balance == Decimal.new("110.0")
     end
 
-    test "returns error for invalid transaction", context do
-      transaction_json = %{
-        "amount" => "invalid",
-        "operation" => "deposit",
-        "wallet_origin_number" => context[:wallet1].number,
-        "wallet_origin_id" => context[:wallet1].id
-      }
+    test "validates and processes a withdraw transaction", %{user_id: user_id} do
+      amount = 10.0
+      operation = :withdraw
 
-      assert {:bad_request, _} = Transactions.register_transaction(transaction_json)
-    end
-  end
+      result = Transactions.process_transaction({:ok, user_id}, amount, operation)
 
-  describe "transfer_to_wallet_by_user/3" do
-    test "returns error for failed transaction", context do
-      assert {:bad_request, _} = Transactions.transfer_to_wallet_by_user(context[:wallet1].user_id, context[:wallet2].number, 200.0)
+      assert {:ok, _} = result
+
+      {:ok, updated_wallet} = Wallets.get_wallet_by_user(user_id)
+      assert updated_wallet.balance == Decimal.new("90.0")
     end
   end
 end

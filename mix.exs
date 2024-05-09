@@ -9,7 +9,8 @@ defmodule Wallet.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      dialyzer: dialyzer()
     ]
   end
 
@@ -60,6 +61,15 @@ defmodule Wallet.MixProject do
         "esbuild wallet --minify",
         "phx.digest"
       ]
+    ]
+  end
+
+  defp dialyzer do
+    [
+      plt_add_deps: :transitive,
+      plt_add_apps: [:mix],
+      ignore_warnings: "dialyzer.ignore-warnings",
+      exclude_modules: [Exqlite.Sqlite3NIF]
     ]
   end
 end
