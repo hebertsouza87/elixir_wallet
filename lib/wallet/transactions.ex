@@ -10,9 +10,15 @@ defmodule Wallet.Transactions do
   alias Wallet.Wallets
   alias Wallet.Transaction
 
+
+
+
+
+
   @doc """
   Adiciona uma quantidade à carteira de um usuário.
   """
+  def add_to_wallet_by_user({:ok, user_id}, amount), do: add_to_wallet_by_user(user_id, amount)
   def add_to_wallet_by_user(user_id, amount) do
     :telemetry.execute([:deposit, :started], %{amount: amount})
     Logger.info("Adding #{amount} to wallet of user #{user_id}")
@@ -65,6 +71,7 @@ defmodule Wallet.Transactions do
   @doc """
   Retira uma quantidade da carteira de um usuário.
   """
+  def withdraw_to_wallet_by_user({:ok, user_id}, amount), do: withdraw_to_wallet_by_user(user_id, amount)
   def withdraw_to_wallet_by_user(user_id, amount) do
     :telemetry.execute([:withdraw, :started], %{amount: amount})
 
@@ -81,6 +88,7 @@ defmodule Wallet.Transactions do
   @doc """
   Transfere uma quantidade de uma carteira para outra.
   """
+  def transfer_to_wallet_by_user({:ok, user_id}, to_wallet_number, amount), do: transfer_to_wallet_by_user(user_id, to_wallet_number, amount)
   def transfer_to_wallet_by_user(user_id, to_wallet_number, amount) do
     :telemetry.execute([:transfer, :started], %{amount: amount})
     Logger.info("Transferring from wallet of user #{user_id} to wallet #{to_wallet_number}")
@@ -101,6 +109,7 @@ defmodule Wallet.Transactions do
       |> handle_transaction_result()
     end
   end
+  def transfer_to_wallet_by_user(error, reason, _), do: {error, reason}
 
   defp create_transaction_multi(multi, attrs, operation_name) do
     Multi.insert(multi, operation_name, Transaction.changeset(%Transaction{}, attrs))
