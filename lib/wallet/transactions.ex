@@ -10,39 +10,10 @@ defmodule Wallet.Transactions do
   alias Wallet.Wallets
   alias Wallet.Transaction
 
-
-
-
-
-
   @doc """
-  Adiciona uma quantidade à carteira de um usuário.
+  Processa uma transação a partir de um json
   """
-  def add_to_wallet_by_user({:ok, user_id}, amount), do: add_to_wallet_by_user(user_id, amount)
-  def add_to_wallet_by_user(user_id, amount) do
-    :telemetry.execute([:deposit, :started], %{amount: amount})
-    Logger.info("Adding #{amount} to wallet of user #{user_id}")
-
-    with :ok <- validate_amount(amount) do
-      user_id
-      |> Wallets.get_wallet_by_user()
-      |> build_transaction(amount)
-      |> Wallet.Kafka.Producer.send_deposit()
-      |> monitoring()
-    end
-  end
-
-  defp monitoring({:ok, %Transaction{} = transaction}) do
-    Logger.info("Deposit sent to Kafka")
-    :telemetry.execute([:deposit, :completed], %{amount: transaction.amount})
-    {:ok, transaction}
-  end
-  defp monitoring({:not_found, message}), do: {:not_found, message}
-
-  @doc """
-  Registra uma transação.
-  """
-  def register_transaction(transaction_json) do
+  def process_transaction_json(transaction_json) do
     Logger.info("Registering transaction: #{inspect(transaction_json)}")
 
     with :ok <- validate_amount(transaction_json["amount"]),
@@ -58,48 +29,20 @@ defmodule Wallet.Transactions do
     end
   end
 
-  defp handle_transaction_result({:ok, %{create_transaction: created_transaction}}) do
-    Logger.info("Transaction registered: #{inspect(created_transaction)}")
-    {:ok, created_transaction}
-  end
-  defp handle_transaction_result({:ok, %{update_from_wallet: _, update_to_wallet: _, create_transaction_from: created_transaction_from, create_transaction_to: created_transaction_to} = _result}) do
-    Logger.info("Transaction registered from: #{inspect(created_transaction_from)} to: #{inspect(created_transaction_to)} ")
-    {:ok, created_transaction_from}
-  end
-  defp handle_transaction_result({:error, error, message, _}), do: {:error, {error, message}}
-
-  @doc """
-  Retira uma quantidade da carteira de um usuário.
-  """
-  def withdraw_to_wallet_by_user({:ok, user_id}, amount), do: withdraw_to_wallet_by_user(user_id, amount)
-  def withdraw_to_wallet_by_user(user_id, amount) do
-    :telemetry.execute([:withdraw, :started], %{amount: amount})
-
-    with {:ok, balance} <- change_balance(user_id, amount, :withdraw) do
-      :telemetry.execute([:withdraw, :created], %{amount: amount})
-      {:ok, balance}
-    else
-      error ->
-      :telemetry.execute([:withdraw, :error], %{amount: amount})
-      error
-    end
-  end
-
   @doc """
   Transfere uma quantidade de uma carteira para outra.
   """
-  def transfer_to_wallet_by_user({:ok, user_id}, to_wallet_number, amount), do: transfer_to_wallet_by_user(user_id, to_wallet_number, amount)
-  def transfer_to_wallet_by_user(user_id, to_wallet_number, amount) do
+  def process_transfer({:ok, user_id}, to_wallet_number, amount) do
     :telemetry.execute([:transfer, :started], %{amount: amount})
     Logger.info("Transferring from wallet of user #{user_id} to wallet #{to_wallet_number}")
 
     with :ok <- validate_amount(amount),
-         {:ok, from_wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
-         {:ok, to_wallet} <- Wallets.get_and_lock_wallet_by_number(to_wallet_number),
-         :ok <- validate_same_wallet(from_wallet, to_wallet),
-         new_balance_from <- calculate_new_balance(from_wallet, amount, :withdraw),
-         :ok <- validate_sufficient_funds(new_balance_from),
-         new_balance_to <- calculate_new_balance(to_wallet, amount, :deposit) do
+        {:ok, from_wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
+        {:ok, to_wallet} <- Wallets.get_and_lock_wallet_by_number(to_wallet_number),
+        :ok <- validate_same_wallet(from_wallet, to_wallet),
+        new_balance_from <- calculate_new_balance(from_wallet, amount, :withdraw),
+        :ok <- validate_sufficient_funds(new_balance_from),
+        new_balance_to <- calculate_new_balance(to_wallet, amount, :deposit) do
 
       Multi.new()
       |> Multi.run(:update_from_wallet, fn _repo, _changes -> Wallets.update_wallet_balance(from_wallet, new_balance_from) end)
@@ -109,7 +52,40 @@ defmodule Wallet.Transactions do
       |> handle_transaction_result()
     end
   end
-  def transfer_to_wallet_by_user(error, reason, _), do: {error, reason}
+
+  def process_transaction({:ok, user_id}, amount, operation) do
+    :telemetry.execute([operation, :started], %{amount: amount})
+    Logger.info("#{operation |> to_string |> String.capitalize} #{amount} to wallet of user #{user_id}")
+
+    with :ok <- validate_amount(amount),
+         {:ok, wallet} <- Wallets.get_wallet_by_user(user_id),
+         new_balance <- calculate_new_balance(wallet, amount, operation),
+         :ok <- validate_sufficient_funds(new_balance) do
+
+      Multi.new()
+      |> Multi.run(:update_wallet_balance, fn _repo, _changes -> Wallets.update_wallet_balance(wallet, new_balance) end)
+      |> create_transaction_multi(%{
+          wallet_origin_id: wallet.id,
+          wallet_origin_number: wallet.number,
+          amount: amount,
+          operation: operation,
+        }, :create_transaction)
+      |> Repo.transaction()
+      |> handle_transaction_result()
+    end
+  end
+
+  defp calculate_new_balance(wallet, amount, :withdraw), do: Decimal.sub(wallet.balance, Decimal.new(Float.to_string(amount)))
+  defp calculate_new_balance(wallet, amount, :deposit), do: Decimal.add(wallet.balance, Decimal.new(Float.to_string(amount)))
+  defp calculate_new_balance(wallet, amount, "deposit"), do: calculate_new_balance(wallet, amount, :deposit)
+  defp calculate_new_balance(wallet, amount, "withdraw"), do: calculate_new_balance(wallet, amount, :withdraw)
+
+  defp correct_decimal_places?(amount) do
+    Float.to_string(amount)
+    |> String.split(".")
+    |> Enum.at(1)
+    |> String.length() <= 2
+  end
 
   defp create_transaction_multi(multi, attrs, operation_name) do
     Multi.insert(multi, operation_name, Transaction.changeset(%Transaction{}, attrs))
@@ -137,57 +113,15 @@ defmodule Wallet.Transactions do
     }))
   end
 
-  defp build_transaction({:ok, wallet}, amount) do
-    %Transaction{
-      id: Ecto.UUID.generate(),
-      amount: amount,
-      operation: :deposit,
-      wallet_origin_id: wallet.id,
-      wallet_origin_number: wallet.number
-    }
+  defp handle_transaction_result({:ok, %{create_transaction: created_transaction}}) do
+    Logger.info("Transaction registered: #{inspect(created_transaction)}")
+    {:ok, created_transaction}
   end
-  defp build_transaction({error, reason}, _amount), do: {error, reason}
-
-  defp change_balance(user_id, amount, operation) do
-    Logger.info("Changing balance of user #{user_id} by #{operation}")
-
-    with :ok <- validate_amount(amount),
-         {:ok, wallet} <- Wallets.get_and_lock_wallet_by_user(user_id),
-         new_balance <- calculate_new_balance(wallet, amount, operation),
-         :ok <- validate_sufficient_funds(new_balance) do
-
-      Multi.new()
-      |> Multi.run(:update_wallet_balance, fn _repo, _changes -> Wallets.update_wallet_balance(wallet, new_balance) end)
-      |> create_transaction_multi(%{
-          wallet_origin_id: wallet.id,
-          wallet_origin_number: wallet.number,
-          amount: amount,
-          operation: operation,
-        }, :create_transaction)
-      |> Repo.transaction()
-      |> handle_transaction_result()
-    end
+  defp handle_transaction_result({:ok, %{update_from_wallet: _, update_to_wallet: _, create_transaction_from: created_transaction_from, create_transaction_to: created_transaction_to} = _result}) do
+    Logger.info("Transaction registered from: #{inspect(created_transaction_from)} to: #{inspect(created_transaction_to)} ")
+    {:ok, created_transaction_from}
   end
-
-  defp validate_same_wallet(from_wallet, to_wallet) do
-    if from_wallet.id == to_wallet.id, do: {:bad_request, "Same wallet transfer not allowed"}, else: :ok
-  end
-
-  defp calculate_new_balance(wallet, amount, :withdraw), do: Decimal.sub(wallet.balance, Decimal.new(Float.to_string(amount)))
-  defp calculate_new_balance(wallet, amount, :deposit), do: Decimal.add(wallet.balance, Decimal.new(Float.to_string(amount)))
-  defp calculate_new_balance(wallet, amount, "deposit"), do: calculate_new_balance(wallet, amount, :deposit)
-  defp calculate_new_balance(wallet, amount, "withdraw"), do: calculate_new_balance(wallet, amount, :withdraw)
-
-  defp validate_sufficient_funds(new_balance) do
-    if Decimal.compare(new_balance, Decimal.new("0.0")) == :lt, do: {:bad_request, "Insufficient funds"}, else: :ok
-  end
-
-  defp correct_decimal_places?(amount) do
-    Float.to_string(amount)
-    |> String.split(".")
-    |> Enum.at(1)
-    |> String.length() <= 2
-  end
+  defp handle_transaction_result({:error, error, message, _}), do: {:error, {error, message}}
 
   defp validate_amount(amount) do
     cond do
@@ -203,5 +137,13 @@ defmodule Wallet.Transactions do
       true ->
         :ok
     end
+  end
+
+  defp validate_same_wallet(from_wallet, to_wallet) do
+    if from_wallet.id == to_wallet.id, do: {:bad_request, "Same wallet transfer not allowed"}, else: :ok
+  end
+
+  defp validate_sufficient_funds(new_balance) do
+    if Decimal.compare(new_balance, Decimal.new("0.0")) == :lt, do: {:bad_request, "Insufficient funds"}, else: :ok
   end
 end

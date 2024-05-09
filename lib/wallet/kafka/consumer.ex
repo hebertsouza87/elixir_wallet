@@ -25,10 +25,10 @@ defmodule Wallet.Kafka.Consumer do
 
   def handle_message("deposit", value) do
     value
-    |> log_deposit
-    |> Jason.decode!
-    |> Transactions.register_transaction
-    |> execute_telemetry
+    |> log_deposit()
+    |> Jason.decode!()
+    |> Transactions.process_transaction_json()
+    |> execute_telemetry()
   end
 
   def handle_message(key, message) do
