@@ -1,7 +1,8 @@
 defmodule Wallet.TransactionTest do
   import Wallet.Factory
 
-  use ExUnit.Case
+  use Wallet.DataCase, async: true
+
   alias Wallet.Transaction
   alias Wallet.Transactions
   alias Wallet.Repo
@@ -27,7 +28,7 @@ defmodule Wallet.TransactionTest do
       {:ok, updated_wallet_to} = Wallets.get_wallet_by_number(to_wallet_number)
 
       assert updated_wallet_from.balance == Decimal.new("90.0")
-      assert updated_wallet_from.balance == Decimal.new("110.0")
+      assert updated_wallet_to.balance == Decimal.new("110.0")
     end
   end
 
@@ -46,7 +47,7 @@ defmodule Wallet.TransactionTest do
 
     test "validates and processes a withdraw transaction", %{user_id: user_id} do
       amount = 10.0
-      operation = :deposit
+      operation = :withdraw
 
       result = Transactions.process_transaction({:ok, user_id}, amount, operation)
 
